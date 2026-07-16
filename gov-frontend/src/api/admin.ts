@@ -3,6 +3,11 @@
 // E4-认证权限
 export const adminLogin = (data: { username: string; password: string }) =>
   request.post('/admin/auth/login', data)
+export interface RegisterData {
+  username: string; password: string; confirmPassword: string; realName: string
+  gender: string; idCard: string; phone: string; email: string; deptCode: string; address: string
+}
+export const adminRegister = (data: RegisterData) => request.post('/admin/auth/register', data)
 export const adminInfo = () => request.get('/admin/auth/info')
 export const adminLogout = () => request.post('/admin/auth/logout')
 

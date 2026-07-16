@@ -8,6 +8,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public WebMvcConfig(JwtAuthInterceptor interceptor) { this.interceptor = interceptor; }
     @Override public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(interceptor).addPathPatterns("/api/v1/admin/**")
-                .excludePathPatterns("/api/v1/admin/auth/login");
+                .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register");
     }
 }

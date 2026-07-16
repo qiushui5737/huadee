@@ -1,13 +1,12 @@
-package com.gov.admin.entity;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+package com.gov.admin.dto;
+
 import lombok.Data;
+
 @Data
-@TableName("sys_user")
-public class SysUser {
-    private Long id;
+public class RegisterRequest {
     private String username;
     private String password;
+    private String confirmPassword;
     private String realName;
     private String gender;
     private String idCard;
@@ -15,6 +14,4 @@ public class SysUser {
     private String email;
     private String deptCode;
     private String address;
-    private Integer status;
-    @TableLogic private Integer deleted;
 }

@@ -30,6 +30,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/Login.vue')
   },
   {
+    path: '/admin/register',
+    name: 'admin-register',
+    component: () => import('@/views/admin/Register.vue')
+  },
+  {
     path: '/admin',
     component: () => import('@/views/admin/Layout.vue'),
     meta: { requiresAuth: true },
@@ -66,7 +71,7 @@ router.beforeEach(async (to, _from, next) => {
         next({ name: 'admin-login' })
       }
     }
-  } else if (to.name === 'admin-login' && localStorage.getItem('admin_token')) {
+  } else if ((to.name === 'admin-login' || to.name === 'admin-register') && localStorage.getItem('admin_token')) {
     next({ name: 'admin-dashboard' })
   } else {
     next()

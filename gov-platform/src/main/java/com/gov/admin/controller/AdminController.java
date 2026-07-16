@@ -3,6 +3,7 @@ package com.gov.admin.controller;
 import com.gov.common.result.Result;
 import com.gov.common.result.PageResult;
 import com.gov.admin.service.AuthService;
+import com.gov.admin.dto.RegisterRequest;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
@@ -23,6 +24,12 @@ public class AdminController {
     @PostMapping("/auth/login")
     public Result<Map<String,Object>> login(@RequestBody Map<String,String> body) {
         return Result.success(authService.login(body.get("username"), body.get("password")), "登录成功");
+    }
+
+    @PostMapping("/auth/register")
+    public Result<Void> register(@RequestBody RegisterRequest request) {
+        authService.register(request);
+        return Result.success(null, "注册成功，请登录");
     }
 
     @GetMapping("/auth/info")
