@@ -1,0 +1,56 @@
+# =====================================================
+# 公共配置（提交到仓库，所有人共享）
+# 个人数据库/Redis密码请写在 application-local.yml 中
+# =====================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gov-platform
+  datasource:
+    url: jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # username/password 由 application-local.yml 提供
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gov-platform
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
