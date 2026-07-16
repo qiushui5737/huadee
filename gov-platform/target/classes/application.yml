@@ -5,14 +5,14 @@ spring:
   application:
     name: gov-platform
   datasource:
-    url: jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: root
-    password: root
+    url: ${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       database: 0
 
 mybatis-plus:
