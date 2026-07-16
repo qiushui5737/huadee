@@ -1,0 +1,24 @@
+-- =====================================================
+-- 数据库迁移脚本使用说明
+-- =====================================================
+--
+-- 1. 新成员初始化数据库:
+--    直接执行 init.sql 即可创建完整库结构
+--    mysql -u root -p < sql/init.sql
+--
+-- 2. 已有环境增量更新:
+--    按序号顺序执行 migrations/ 下的脚本
+--    mysql -u root -p gov_platform < sql/migrations/V001_xxx.sql
+--    mysql -u root -p gov_platform < sql/migrations/V002_xxx.sql
+--    ...
+--
+-- 3. 命名规范:
+--    V{序号}_{简短描述}.sql
+--    例: V001_message_add_base_fields.sql
+--        V002_create_xxx_table.sql
+--        V003_add_xxx_column.sql
+--
+-- 4. 提交规则:
+--    修改数据库结构后，必须同时提交对应的迁移脚本
+--    脚本中需注明作者、日期、变更说明
+-- =====================================================
