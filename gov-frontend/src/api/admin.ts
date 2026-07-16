@@ -4,6 +4,7 @@
 export const adminLogin = (data: { username: string; password: string }) =>
   request.post('/admin/auth/login', data)
 export const adminInfo = () => request.get('/admin/auth/info')
+export const adminLogout = () => request.post('/admin/auth/logout')
 
 // E1-E2-统计大屏
 export const dashboard = () => request.get('/admin/stats/dashboard')

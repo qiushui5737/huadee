@@ -210,9 +210,9 @@ CREATE TABLE IF NOT EXISTS sys_message (
 -- 初始化数据
 -- =====================================================
 INSERT INTO sys_user (username, password, real_name, dept_code) VALUES
-  ('admin', '$2a$10$placeholder', '系统管理员', 'ADMIN'),
-  ('edu_user', '$2a$10$placeholder', '教育部专员', 'EDU'),
-  ('hea_user', '$2a$10$placeholder', '卫健委专员', 'HEA');
+  ('admin', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '系统管理员', 'ADMIN'),
+  ('edu_user', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '教育部专员', 'EDU'),
+  ('hea_user', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '卫健委专员', 'HEA');
 
 INSERT INTO sys_role (role_code, role_name) VALUES
   ('ADMIN', '系统管理员'),
