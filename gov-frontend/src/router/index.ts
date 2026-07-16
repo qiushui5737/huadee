@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 /**
  * 路由配置
@@ -51,14 +52,22 @@ const router = createRouter({
 })
 
 // B端路由守卫 - 检查Token
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth) {
     const token = localStorage.getItem('admin_token')
     if (!token) {
       next({ name: 'admin-login' })
     } else {
-      next()
+      try {
+        await useUserStore().restoreSession()
+        next()
+      } catch {
+        useUserStore().logout()
+        next({ name: 'admin-login' })
+      }
     }
+  } else if (to.name === 'admin-login' && localStorage.getItem('admin_token')) {
+    next({ name: 'admin-dashboard' })
   } else {
     next()
   }

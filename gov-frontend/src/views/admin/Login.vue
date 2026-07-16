@@ -8,10 +8,7 @@
         需通过政务VPN接入，并完成双因素认证后方可访问。
       </el-alert>
       <el-input v-model="form.username" placeholder="工号/用户名" style="margin-bottom:16px;" />
-      <el-input v-model="form.password" type="password" placeholder="密码" style="margin-bottom:16px;" />
-      <el-input v-model="form.code" placeholder="短信验证码(双因素)" style="margin-bottom:16px;">
-        <template #append><el-button>获取验证码</el-button></template>
-      </el-input>
+      <el-input v-model="form.password" type="password" placeholder="密码" show-password style="margin-bottom:16px;" @keyup.enter="onLogin" />
       <el-button type="primary" style="width:100%;" @click="onLogin" :loading="loading">安全登录</el-button>
       <div style="text-align:center;margin-top:12px;">
         <a href="/" style="color:rgba(255,255,255,.4);font-size:12px;">← 返回群众客户端</a>
@@ -29,7 +26,7 @@ import { useUserStore } from '@/stores/user'
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-const form = reactive({ username: '', password: '', code: '' })
+const form = reactive({ username: '', password: '' })
 
 async function onLogin() {
   if (!form.username || !form.password) {
@@ -40,8 +37,8 @@ async function onLogin() {
   try {
     const res: any = await adminLogin({ username: form.username, password: form.password })
     userStore.setToken(res.data.token)
-    userStore.setUser(res.data.username, [res.data.role])
-    router.push('/admin')
+    userStore.setUser(res.data.realName || res.data.username, res.data.roles || [])
+    router.replace('/admin')
   } catch {
     // error handled by interceptor
   } finally {
