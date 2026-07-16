@@ -94,9 +94,6 @@ CREATE TABLE IF NOT EXISTS message (
     reply_by    VARCHAR(50)  COMMENT '回复人',
     reply_time  DATETIME     DEFAULT NULL,
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    create_by   BIGINT       DEFAULT 0 COMMENT '创建人',
-    update_by   BIGINT       DEFAULT 0 COMMENT '更新人',
     deleted     TINYINT      DEFAULT 0
 ) ENGINE=InnoDB COMMENT='政民互动留言';
 
