@@ -160,12 +160,17 @@ CREATE TABLE IF NOT EXISTS sys_user (
     username    VARCHAR(50)  NOT NULL COMMENT '用户名/工号',
     password    VARCHAR(200) NOT NULL COMMENT '密码(BCrypt)',
     real_name   VARCHAR(50)  COMMENT '姓名',
+    gender      VARCHAR(10)  COMMENT '性别',
+    id_card     VARCHAR(18)  COMMENT '身份证号',
     phone       VARCHAR(20)  COMMENT '手机号',
+    email       VARCHAR(100) COMMENT '邮箱',
     dept_code   VARCHAR(50)  COMMENT '所属部门',
+    address     VARCHAR(255) COMMENT '联系地址',
     status      TINYINT      DEFAULT 1 COMMENT '0禁用 1启用',
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
     deleted     TINYINT      DEFAULT 0,
-    UNIQUE KEY uk_username (username)
+    UNIQUE KEY uk_username (username),
+    UNIQUE KEY uk_id_card (id_card)
 ) ENGINE=InnoDB COMMENT='系统用户';
 
 CREATE TABLE IF NOT EXISTS sys_role (
