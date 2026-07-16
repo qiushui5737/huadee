@@ -27,6 +27,3 @@ Thumbs.db
 # === 临时文件 ===
 *.tmp
 *.bak
-
-# === 个人本地配置（不提交） ===
-**/application-local.yml

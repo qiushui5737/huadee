@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>政府网站集约化平台 - 低保真原型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Microsoft YaHei","SimHei",sans-serif; background:#f0f2f5; color:#333; }
+  a { text-decoration:none; color:inherit; }
+  ul { list-style:none; }
+  .placeholder-box { background:#e8e8e8; border:1px dashed #bbb; color:#999; display:flex; align-items:center; justify-content:center; font-size:13px; border-radius:4px; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; margin-right:4px; }
+  .tag-blue { background:#e6f7ff; color:#1890ff; border:1px solid #91d5ff; }
+  .tag-green { background:#f6ffed; color:#52c41a; border:1px solid #b7eb8f; }
+  .tag-orange { background:#fff7e6; color:#fa8c16; border:1px solid #ffd591; }
+  .tag-red { background:#fff1f0; color:#f5222d; border:1px solid #ffa39e; }
+  .tag-gray { background:#fafafa; color:#999; border:1px solid #d9d9d9; }
+  .btn { display:inline-block; padding:6px 16px; border-radius:4px; font-size:13px; cursor:pointer; border:none; }
+  .btn-primary { background:#1890ff; color:#fff; }
+  .btn-default { background:#fff; color:#333; border:1px solid #d9d9d9; }
+  .btn-success { background:#52c41a; color:#fff; }
+  .btn-warning { background:#fa8c16; color:#fff; }
+  .btn-danger { background:#f5222d; color:#fff; }
+  .btn-sm { padding:3px 10px; font-size:12px; }
+  .page { display:none; min-height:100vh; }
+  .page.active { display:block; }
+  .top-bar { background:linear-gradient(135deg,#0052cc,#1890ff); color:#fff; padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,.15); position:sticky; top:0; z-index:100; }
+  .top-bar .logo { font-size:18px; font-weight:bold; display:flex; align-items:center; gap:10px; }
+  .top-bar .logo span.badge { background:#fff; color:#1890ff; padding:2px 8px; border-radius:4px; font-size:11px; }
+  .top-bar nav ul { display:flex; gap:4px; }
+  .top-bar nav ul li { padding:8px 14px; cursor:pointer; border-radius:4px; font-size:14px; transition:background .2s; }
+  .top-bar nav ul li:hover, .top-bar nav ul li.active { background:rgba(255,255,255,.2); }
+  .top-bar .user-area { display:flex; align-items:center; gap:12px; font-size:13px; }
+  .end-switch { position:fixed; top:64px; right:24px; z-index:999; display:flex; gap:4px; background:#fff; border-radius:20px; padding:4px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+  .end-switch button { border:none; background:transparent; padding:6px 16px; border-radius:16px; font-size:13px; cursor:pointer; }
+  .end-switch button.active { background:#1890ff; color:#fff; }
+  .sidebar { width:200px; background:#001529; min-height:calc(100vh - 60px); color:#fff; padding-top:8px; flex-shrink:0; }
+  .sidebar .menu-item { padding:12px 20px; font-size:14px; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:8px; border-left:3px solid transparent; }
+  .sidebar .menu-item:hover { background:rgba(255,255,255,.08); }
+  .sidebar .menu-item.active { background:rgba(24,144,255,.2); border-left-color:#1890ff; color:#40a9ff; }
+  .sidebar .menu-group-title { padding:16px 20px 8px; font-size:12px; color:rgba(255,255,255,.35); text-transform:uppercase; }
+  .content-area { flex:1; padding:20px; overflow-y:auto; }
+  .layout-flex { display:flex; }
+  .card { background:#fff; border-radius:8px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
+  .card-title { font-size:16px; font-weight:bold; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .col-2 { width:16.66%; }
+  .col-3 { width:25%; }
+  .col-4 { width:33.33%; }
+  .col-6 { width:50%; }
+  .col-8 { width:66.66%; }
+  .col-12 { width:100%; }
+  .search-box { display:flex; gap:8px; }
+  .search-box input { flex:1; padding:10px 16px; border:2px solid #1890ff; border-radius:4px; font-size:14px; outline:none; }
+  .search-box .btn { padding:10px 24px; }
+  .hot-words { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .hot-words a { font-size:12px; color:rgba(255,255,255,.8); cursor:pointer; }
+  .service-card { background:#fff; border-radius:8px; padding:20px; text-align:center; cursor:pointer; transition:box-shadow .2s; border:1px solid #e8e8e8; }
+  .service-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.12); }
+  .service-card .icon { font-size:32px; margin-bottom:10px; }
+  .service-card .name { font-size:14px; font-weight:bold; }
+  .service-card .desc { font-size:12px; color:#999; margin-top:4px; }
+  .dept-card { background:#fff; border-radius:8px; overflow:hidden; cursor:pointer; transition:box-shadow .2s; border:1px solid #e8e8e8; }
+  .dept-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.12); }
+  .dept-card .dept-header { padding:16px; color:#fff; font-size:16px; font-weight:bold; display:flex; align-items:center; gap:8px; }
+  .dept-card .dept-body { padding:16px; }
+  .dept-card .dept-body li { padding:6px 0; font-size:13px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; }
+  .dept-card .dept-body li:last-child { border:none; }
+  .chat-container { display:flex; flex-direction:column; height:calc(100vh - 60px); }
+  .chat-messages { flex:1; overflow-y:auto; padding:20px; }
+  .chat-msg { margin-bottom:16px; display:flex; gap:10px; }
+  .chat-msg.ai .avatar { background:#1890ff; }
+  .chat-msg.user .avatar { background:#52c41a; }
+  .chat-msg .avatar { width:36px; height:36px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .chat-msg .bubble { border-radius:8px; padding:10px 14px; font-size:13px; max-width:70%; line-height:1.6; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+  .chat-msg.user .bubble { background:#1890ff; color:#fff; }
+  .chat-msg.ai .bubble { background:#fff; }
+  .chat-msg.ai .bubble .source { margin-top:8px; padding-top:8px; border-top:1px solid #f0f0f0; font-size:12px; color:#999; }
+  .chat-msg.ai .bubble .suggest { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+  .chat-msg.ai .bubble .suggest a { background:#f5f5f5; padding:4px 10px; border-radius:12px; font-size:12px; color:#1890ff; cursor:pointer; }
+  .chat-input-area { border-top:1px solid #e8e8e8; padding:12px 20px; display:flex; gap:8px; background:#fff; }
+  .chat-input-area input { flex:1; padding:10px 16px; border:1px solid #d9d9d9; border-radius:4px; font-size:14px; }
+  .quick-entry { display:flex; gap:12px; flex-wrap:wrap; }
+  .quick-entry .q-item { background:#f5f5f5; padding:6px 14px; border-radius:16px; font-size:12px; cursor:pointer; color:#333; }
+  .quick-entry .q-item:hover { background:#e6f7ff; color:#1890ff; }
+  .steps { display:flex; margin:20px 0; }
+  .step { flex:1; text-align:center; position:relative; padding-bottom:20px; }
+  .step::before { content:''; position:absolute; top:14px; left:50%; width:100%; height:2px; background:#e8e8e8; z-index:0; }
+  .step:last-child::before { display:none; }
+  .step .dot { width:28px; height:28px; border-radius:50%; background:#e8e8e8; color:#999; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; position:relative; z-index:1; font-size:13px; }
+  .step.done .dot { background:#52c41a; color:#fff; }
+  .step.active .dot { background:#1890ff; color:#fff; }
+  .step .label { font-size:12px; color:#666; }
+  .step.active .label { color:#1890ff; font-weight:bold; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:13px; margin-bottom:6px; color:#333; }
+  .form-group .required { color:#f5222d; margin-left:2px; }
+  .form-group input, .form-group select, .form-group textarea { width:100%; padding:8px 12px; border:1px solid #d9d9d9; border-radius:4px; font-size:13px; }
+  .form-group textarea { min-height:80px; resize:vertical; }
+  .form-row { display:flex; gap:16px; }
+  .form-row .form-group { flex:1; }
+  .radio-group, .check-group { display:flex; gap:16px; align-items:center; }
+  .radio-group label, .check-group label { display:flex; align-items:center; gap:4px; margin:0; }
+  .upload-area { border:1px dashed #d9d9d9; border-radius:4px; padding:20px; text-align:center; color:#999; font-size:13px; cursor:pointer; }
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table th { background:#fafafa; padding:10px 12px; text-align:left; border-bottom:1px solid #e8e8e8; font-weight:600; }
+  .data-table td { padding:10px 12px; border-bottom:1px solid #f0f0f0; }
+  .data-table tr:hover { background:#fafafa; }
+  .stat-card { background:#fff; border-radius:8px; padding:20px; display:flex; flex-direction:column; gap:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .stat-card .stat-title { font-size:13px; color:#999; }
+  .stat-card .stat-value { font-size:28px; font-weight:bold; }
+  .stat-card .stat-trend { font-size:12px; }
+  .stat-card .stat-trend.up { color:#52c41a; }
+  .stat-card .stat-trend.down { color:#f5222d; }
+  .stat-card.blue .stat-value { color:#1890ff; }
+  .stat-card.green .stat-value { color:#52c41a; }
+  .stat-card.orange .stat-value { color:#fa8c16; }
+  .stat-card.purple .stat-value { color:#722ed1; }
+  .chart-placeholder { height:200px; background:#f5f5f5; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#bbb; font-size:13px; position:relative; overflow:hidden; }
+  .message-item { background:#fff; border-radius:8px; padding:16px; margin-bottom:12px; border-left:4px solid #1890ff; }
+  .message-item .msg-header { display:flex; justify-content:space-between; margin-bottom:8px; }
+  .message-item .msg-title { font-size:14px; font-weight:bold; }
+  .message-item .msg-content { font-size:13px; color:#666; margin-bottom:8px; line-height:1.6; }
+  .message-item .msg-footer { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#999; }
+  .dashboard-bg { background:#0a1a35; min-height:calc(100vh - 60px); padding:20px; color:#fff; }
+  .dashboard-bg .card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; }
+  .dashboard-bg .card-title { color:#4fc3f7; }
+  .dashboard-bg .stat-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); }
+  .dashboard-bg .stat-card .stat-title { color:rgba(255,255,255,.6); }
+  .dashboard-bg .stat-card .stat-value { color:#4fc3f7; }
+  .dashboard-bg .stat-card.green .stat-value { color:#4caf50; }
+  .dashboard-bg .stat-card.orange .stat-value { color:#ff9800; }
+  .dashboard-bg .stat-card.purple .stat-value { color:#ab47bc; }
+  .dashboard-bg .chart-placeholder { background:rgba(255,255,255,.03); color:rgba(255,255,255,.3); }
+  .dashboard-bg .data-table th { background:rgba(255,255,255,.05); color:rgba(255,255,255,.6); border-color:rgba(255,255,255,.1); }
+  .dashboard-bg .data-table td { border-color:rgba(255,255,255,.06); color:rgba(255,255,255,.8); }
+  .page-footer { background:#001529; color:rgba(255,255,255,.4); text-align:center; padding:24px; font-size:12px; margin-top:20px; }
+  .page-footer a { color:rgba(255,255,255,.6); cursor:pointer; }
+  .page-footer a:hover { color:#40a9ff; }
+
+  /* ===== B端隔离登录页 ===== */
+  .b-login-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:linear-gradient(135deg,#001529,#003a5c); z-index:2000; display:none; align-items:center; justify-content:center; }
+  .b-login-overlay.show { display:flex; }
+  .b-login-box { width:420px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:40px; }
+  .b-login-box .lock-icon { text-align:center; font-size:48px; margin-bottom:16px; }
+  .b-login-box h2 { text-align:center; color:#fff; font-size:20px; margin-bottom:8px; }
+  .b-login-box .security-tip { text-align:center; color:rgba(255,255,255,.5); font-size:12px; margin-bottom:24px; }
+  .b-login-box .form-group { margin-bottom:16px; }
+  .b-login-box .form-group label { display:block; color:rgba(255,255,255,.7); font-size:13px; margin-bottom:6px; }
+  .b-login-box .form-group input { width:100%; padding:10px 14px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); border-radius:6px; color:#fff; font-size:14px; }
+  .b-login-box .form-group input::placeholder { color:rgba(255,255,255,.3); }
+  .b-login-box .vpn-notice { background:rgba(250,140,22,.15); border:1px solid rgba(250,140,22,.3); border-radius:6px; padding:10px 12px; font-size:12px; color:rgba(250,140,22,.9); margin-bottom:16px; line-height:1.6; }
+  .b-login-box .btn-login { width:100%; padding:12px; background:#1890ff; color:#fff; border:none; border-radius:6px; font-size:15px; cursor:pointer; margin-top:8px; }
+  .b-login-box .btn-back { width:100%; padding:8px; background:transparent; color:rgba(255,255,255,.4); border:none; font-size:12px; cursor:pointer; margin-top:12px; }
+  .b-login-box .security-stamps { display:flex; justify-content:center; gap:16px; margin-top:20px; opacity:.4; font-size:11px; }
+
+  /* ===== 隔离提示条 ===== */
+  .isolation-banner { background:#f6ffed; border:1px solid #b7eb8f; border-radius:6px; padding:8px 16px; font-size:12px; color:#389e0d; display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo">🏛️ 政府网站集约化平台 <span class="badge" id="endBadge">群众端</span></div>
+  <nav>
+    <ul id="cNav">
+      <li class="active" onclick="showPageC('c-home',this)">首页</li>
+      <li onclick="showPageC('c-search',this)">智能搜索</li>
+      <li onclick="showPageC('c-chat',this)">智能问答</li>
+      <li onclick="showPageC('c-service',this)">办事服务</li>
+      <li onclick="showPageC('c-interaction',this)">政民互动</li>
+      <li onclick="showPageC('c-disclosure',this)">依申请公开</li>
+      <li onclick="showPageC('c-dept',this)">部门集约</li>
+    </ul>
+    <ul id="bNav" style="display:none">
+      <li class="active" onclick="showPageB('b-dashboard',this)">数据大屏</li>
+      <li onclick="showPageB('b-stats',this)">统计报表</li>
+      <li onclick="showPageB('b-interaction',this)">互动管理</li>
+      <li onclick="showPageB('b-service',this)">办事审批</li>
+      <li onclick="showPageB('b-disclosure',this)">依申请审核</li>
+      <li onclick="showPageB('b-cms',this)">内容管理</li>
+      <li onclick="showPageB('b-performance',this)">绩效管理</li>
+      <li onclick="showPageB('b-system',this)">系统管理</li>
+    </ul>
+  </nav>
+    <div class="user-area"><span id="userName">👤 张三 / 个人用户</span> <span id="bExitBtn" style="display:none;margin-left:12px;cursor:pointer;color:rgba(255,255,255,.6);" onclick="exitBEnd()">← 返回群众端</span></div>
+</div>
+
+
+
+<!-- ============ C端首页 ============ -->
+<div class="page active" id="c-home">
+  <div style="background:linear-gradient(135deg,#0052cc,#1890ff); padding:60px 24px 40px; text-align:center;">
+    <h1 style="color:#fff; font-size:28px; margin-bottom:8px;">一站式政务服务 · 让群众少跑腿</h1>
+    <p style="color:rgba(255,255,255,.7); font-size:14px; margin-bottom:24px;">教育部 · 社会保障部 · 财政部 集约服务</p>
+    <div style="max-width:600px; margin:0 auto;">
+      <div class="search-box">
+        <input type="text" placeholder="搜索办事指南、政策文件、公告..." onclick="navTo('c-search')">
+        <button class="btn btn-primary" style="background:#fff;color:#1890ff;" onclick="navTo('c-search')">🔍 搜索</button>
+      </div>
+      <div class="hot-words">
+        <a>热搜: 社保卡申领</a> <a>就业补贴</a> <a>公租房申请</a> <a>教师资格认定</a> <a>税务办理</a>
+      </div>
+    </div>
+  </div>
+  <div style="max-width:1200px; margin:0 auto; padding:24px;">
+    <div class="card">
+      <div class="card-title">📋 办事服务快捷入口 <span style="font-size:12px;color:#999;font-weight:normal;">模块B1-B5</span></div>
+      <div class="row">
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">🎓</div><div class="name">就业补贴</div><div class="desc">高校毕业生申请</div></div></div>
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">💳</div><div class="name">社保卡申领</div><div class="desc">社会保障部</div></div></div>
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">🏠</div><div class="name">公租房申请</div><div class="desc">住房保障部门</div></div></div>
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">📚</div><div class="name">教师资格认定</div><div class="desc">教育部</div></div></div>
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">💡</div><div class="name">水电缴费</div><div class="desc">公用事业</div></div></div>
+        <div class="col-2"><div class="service-card" onclick="navTo('c-service')"><div class="icon">💰</div><div class="name">税务办理</div><div class="desc">个人/企业</div></div></div>
+      </div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg,#e6f7ff,#f0f5ff); border:1px solid #91d5ff;">
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div style="font-size:40px;">🤖</div>
+        <div style="flex:1;">
+          <div style="font-size:16px; font-weight:bold; color:#1890ff;">政务智能助手 · 7×24小时在线</div>
+          <div style="font-size:13px; color:#666; margin-top:4px;">基于Spring AI大模型，支持多轮对话、流式回答、政策知识库问答、敏感词过滤</div>
+        </div>
+        <button class="btn btn-primary" onclick="navTo('c-chat')">开始问答 →</button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-8">
+        <div class="card">
+          <div class="card-title">🏛️ 部门集约化 <span style="font-size:12px;color:#999;font-weight:normal;">模块D1-D5</span></div>
+          <div class="row">
+            <div class="col-4">
+              <div class="dept-card" onclick="navTo('c-dept')">
+                <div class="dept-header" style="background:linear-gradient(135deg,#1890ff,#096dd9);">📚 教育部</div>
+                <div class="dept-body">
+                  <li><span>教师资格认定通知</span><span>07-10</span></li>
+                  <li><span>高校毕业生就业补贴政策</span><span>07-08</span></li>
+                  <li><span>秋季开学准备工作通知</span><span>07-05</span></li>
+                  <li><span>招生考试政策解读</span><span>07-01</span></li>
+                </div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="dept-card" onclick="navTo('c-dept')">
+                <div class="dept-header" style="background:linear-gradient(135deg,#52c41a,#389e0d);">🛡️ 社会保障部</div>
+                <div class="dept-body">
+                  <li><span>社保卡申领指南更新</span><span>07-12</span></li>
+                  <li><span>养老保险调整通知</span><span>07-09</span></li>
+                  <li><span>医疗保险报销政策</span><span>07-06</span></li>
+                  <li><span>就业补贴申领流程</span><span>07-03</span></li>
+                </div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="dept-card" onclick="navTo('c-dept')">
+                <div class="dept-header" style="background:linear-gradient(135deg,#fa8c16,#d4670c);">💰 财政部</div>
+                <div class="dept-body">
+                  <li><span>2026年度财政预算公开</span><span>07-11</span></li>
+                  <li><span>个人税务办理指南</span><span>07-07</span></li>
+                  <li><span>企业税费申报通知</span><span>07-04</span></li>
+                  <li><span>非税收入政策调整</span><span>07-01</span></li>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card">
+          <div class="card-title">💬 政民互动 <span style="font-size:12px;color:#999;font-weight:normal;">模块C1-C5</span></div>
+          <button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="navTo('c-interaction')">我要留言</button>
+          <div class="message-item" style="border-left-color:#52c41a; margin-bottom:8px;">
+            <div class="msg-header"><span class="msg-title">公租房分配建议</span><span class="tag tag-green">已回复</span></div>
+            <div class="msg-content">建议增加公租房线上申请渠道...</div>
+            <div class="msg-footer"><span>住房保障部</span><span>07-14</span></div>
+          </div>
+          <div class="message-item" style="border-left-color:#fa8c16; margin-bottom:8px;">
+            <div class="msg-header"><span class="msg-title">社保卡办理咨询</span><span class="tag tag-orange">处理中</span></div>
+            <div class="msg-content">社保卡丢失如何补办？</div>
+            <div class="msg-footer"><span>社会保障部</span><span>07-13</span></div>
+          </div>
+          <div class="message-item" style="border-left-color:#1890ff; margin-bottom:0;">
+            <div class="msg-header"><span class="msg-title">税务办理表扬</span><span class="tag tag-blue">已公开</span></div>
+            <div class="msg-content">线上税务办理非常便捷，点赞！</div>
+            <div class="msg-footer"><span>财政部</span><span>07-12</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📄 依申请公开 <span style="font-size:12px;color:#999;font-weight:normal;">模块C3-C4</span></div>
+      <div style="display:flex; align-items:center; gap:20px;">
+        <div style="flex:1; font-size:13px; color:#666; line-height:1.8;">
+          依据《政府信息公开条例》，可在线申请获取尚未主动公开的政府信息。<br>
+          支持：在线申请 → 进度查询 → 补充材料 → 查看答复 全流程。
+        </div>
+        <button class="btn btn-primary" onclick="navTo('c-disclosure')">在线申请 →</button>
+        <button class="btn btn-default" onclick="navTo('c-disclosure')">查询进度</button>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    © 2026 政府网站集约化平台 | 五人项目组 · 25个业务模块(A1-E5)<br>
+    <span style="margin-top:8px;display:inline-block;">
+      <a onclick="openBLogin()" style="font-size:11px;opacity:.5;border-bottom:1px dotted;">管理端入口</a>
+      <span style="opacity:.2;margin:0 4px;">|</span>
+      <span style="opacity:.5;font-size:11px;">政务内网专用 · 需VPN接入</span>
+    </span>
+  </div>
+  
+  <!-- ============ B端隔离登录入口 ============ -->
+  <div class="b-login-overlay" id="bLoginOverlay">
+    <div class="b-login-box">
+      <div class="lock-icon">🔐</div>
+      <h2>政府管理端</h2>
+      <div class="security-tip">admin.gov.cn · 政务内网隔离区域</div>
+      <div class="vpn-notice">
+        ⚠ 安全提示：本入口仅供政府工作人员使用。<br>
+        需通过政务VPN接入，并完成双因素认证后方可访问。<br>
+        所有操作均受审计监控。
+      </div>
+      <div class="form-group">
+        <label>工号 / 用户名</label>
+        <input type="text" placeholder="请输入工号" id="bUsername">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" placeholder="请输入密码" id="bPassword">
+      </div>
+      <div class="form-group">
+        <label>短信验证码 <span style="color:rgba(255,255,255,.3);font-size:11px;">(双因素认证)</span></label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" placeholder="6位验证码" style="flex:1;">
+          <button style="padding:0 12px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;">获取验证码</button>
+        </div>
+      </div>
+      <button class="btn-login" onclick="doBLogin()">🔐 安全登录</button>
+      <button class="btn-back" onclick="closeBLogin()">← 返回群众客户端</button>
+      <div class="security-stamps">
+        <span>🛡️ 等保三级</span>
+        <span>📡 VPN加密</span>
+        <span>🔍 全程审计</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 智能搜索 ============ -->
+<div class="page" id="c-search">
+  <div style="max-width:1000px; margin:0 auto; padding:24px;">
+    <div class="card">
+      <div class="search-box">
+        <input type="text" value="社保卡" placeholder="请输入关键词搜索...">
+        <button class="btn btn-primary">🔍 搜索</button>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:8px; align-items:center; font-size:12px; flex-wrap:wrap;">
+        <span class="tag tag-blue">语义搜索已开启</span>
+        <span style="color:#999;">| 类型:</span> <span class="tag tag-gray">全部</span> <span class="tag tag-gray">政策</span> <span class="tag tag-gray">指南</span> <span class="tag tag-gray">公告</span>
+        <span style="color:#999;">| 部门:</span> <span class="tag tag-gray">全部</span>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <span style="font-size:13px; color:#999;">共找到 <b style="color:#1890ff;">126</b> 条结果</span>
+      <span style="font-size:12px;">排序: <span class="tag tag-blue">相关度</span> <span class="tag tag-gray">时间</span></span>
+    </div>
+    <div class="card" style="cursor:pointer;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="font-size:14px;font-weight:bold;">社会保障卡申领办事指南</span>
+        <span class="tag tag-green">办事指南</span>
+      </div>
+      <div style="font-size:13px;color:#666;line-height:1.6;">办理条件：本市户籍居民或持有效居住证的非户籍居民...<mark style="background:#fff08c;">社保卡</mark>申领需提供身份证明、近期免冠照片...</div>
+      <div style="font-size:12px;color:#999;margin-top:6px;">社会保障部 | 2026-07-10 | 浏览2345次</div>
+    </div>
+    <div class="card" style="cursor:pointer;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="font-size:14px;font-weight:bold;">关于社会保障卡补办、换发的通知</span>
+        <span class="tag tag-blue">政策文件</span>
+      </div>
+      <div style="font-size:13px;color:#666;line-height:1.6;">各参保人员：<mark style="background:#fff08c;">社保卡</mark>遗失或损坏的，可通过线上平台申请补办...补办时限为15个工作日...</div>
+      <div style="font-size:12px;color:#999;margin-top:6px;">社会保障部 | 2026-07-08 | 文号:社人函〔2026〕XX号</div>
+    </div>
+    <div class="card" style="cursor:pointer;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="font-size:14px;font-weight:bold;">社会保障卡电子证照上线公告</span>
+        <span class="tag tag-orange">公告公示</span>
+      </div>
+      <div style="font-size:13px;color:#666;line-height:1.6;">即日起，电子<mark style="background:#fff08c;">社保卡</mark>可在本平台直接申领和使用，与实体卡同等效力...</div>
+      <div style="font-size:12px;color:#999;margin-top:6px;">社会保障部 | 2026-07-05 | 有效期至2026-12-31</div>
+    </div>
+    <div style="text-align:center; margin-top:20px;">
+      <button class="btn btn-default btn-sm">← 上一页</button>
+      <span style="margin:0 8px;font-size:13px;">1 / 13</span>
+      <button class="btn btn-default btn-sm">下一页 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 智能问答 ============ -->
+<div class="page" id="c-chat">
+  <div class="chat-container" style="max-width:900px; margin:0 auto;">
+    <div class="chat-messages">
+      <div class="chat-msg ai">
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+          您好！我是政务智能助手，请问有什么可以帮您？<br>我可以回答政策咨询、办事指南、常见问题等。
+          <div class="quick-entry" style="margin-top:8px;">
+            <span class="q-item">如何申领社保卡</span>
+            <span class="q-item">就业补贴怎么申请</span>
+            <span class="q-item">公租房申请条件</span>
+          </div>
+        </div>
+      </div>
+      <div class="chat-msg user">
+        <div class="avatar">👤</div>
+        <div class="bubble">如何申请高校毕业生就业补贴？</div>
+      </div>
+      <div class="chat-msg ai">
+        <div class="avatar">🤖</div>
+        <div class="bubble">
+          高校毕业生就业补贴申请指南如下：<br><br>
+          <b>1. 申请条件</b><br>毕业2年内未就业的高校毕业生，已进行就业失业登记。<br><br>
+          <b>2. 所需材料</b><br>① 身份证原件及复印件 ② 毕业证书 ③ 就业失业登记证明 ④ 银行卡<br><br>
+          <b>3. 办理流程</b><br>在线申请 → 资格审核 → 公示(5天) → 资金发放<br><br>
+          <b>4. 补贴标准</b><br>本科1000元/月，硕士1500元/月，最长24个月。
+          <div class="source">📎 来源：<a style="color:#1890ff;">教育部关于高校毕业生就业补贴的通知</a></div>
+          <div class="suggest">
+            <a>补贴什么时候发放？</a>
+            <a>需要哪些材料？</a>
+            <a>审核需要多久？</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" placeholder="请输入您的问题...">
+      <button class="btn btn-primary">发送 ➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 办事服务 ============ -->
+<div class="page" id="c-service">
+  <div style="max-width:1200px; margin:0 auto; padding:24px;">
+    <div class="card">
+      <div class="card-title">📋 办事服务目录 <span style="font-size:12px;color:#999;font-weight:normal;">模块B1</span></div>
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <span class="tag tag-blue">全部</span> <span class="tag tag-gray">教育</span> <span class="tag tag-gray">社保</span> <span class="tag tag-gray">住房</span> <span class="tag tag-gray">税务</span>
+        <span style="color:#999;">|</span> <span class="tag tag-gray">个人</span> <span class="tag tag-gray">法人</span>
+      </div>
+      <table class="data-table">
+        <tr><th>事项名称</th><th>办理部门</th><th>适用对象</th><th>办理时限</th><th>收费</th><th>操作</th></tr>
+        <tr><td>高校毕业生就业补贴申请</td><td>教育部/人社部</td><td>个人</td><td>30个工作日</td><td>无</td><td><button class="btn btn-primary btn-sm">立即申请</button></td></tr>
+        <tr><td>社会保障卡申领</td><td>社会保障部</td><td>个人</td><td>15个工作日</td><td>无</td><td><button class="btn btn-primary btn-sm">立即申请</button></td></tr>
+        <tr><td>公共租赁住房申请</td><td>住房保障部门</td><td>个人</td><td>60个工作日</td><td>无</td><td><button class="btn btn-primary btn-sm">立即申请</button></td></tr>
+        <tr><td>教师资格认定</td><td>教育部</td><td>个人</td><td>30个工作日</td><td>无</td><td><button class="btn btn-primary btn-sm">立即申请</button></td></tr>
+        <tr><td>水电缴费</td><td>公用事业部门</td><td>个人/法人</td><td>即时</td><td>按量</td><td><button class="btn btn-primary btn-sm">立即缴费</button></td></tr>
+        <tr><td>个人税务办理</td><td>财政部/税务局</td><td>个人</td><td>即时</td><td>按税</td><td><button class="btn btn-primary btn-sm">立即办理</button></td></tr>
+        <tr><td>企业税务办理</td><td>财政部/税务局</td><td>法人</td><td>即时</td><td>按税</td><td><button class="btn btn-primary btn-sm">立即办理</button></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 办事进度查询 <span style="font-size:12px;color:#999;font-weight:normal;">模块B4</span></div>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input type="text" style="flex:1;padding:8px;border:1px solid #d9d9d9;border-radius:4px;" placeholder="请输入申请编号: BS202600001">
+        <button class="btn btn-primary">查询</button>
+      </div>
+      <div style="background:#f9f9f9; padding:16px; border-radius:8px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+          <div><b>高校毕业生就业补贴申请</b> <span class="tag tag-blue">审核中</span></div>
+          <div style="font-size:12px;color:#999;">申请编号: BS202600001 | 预计完成: 2026-08-15</div>
+        </div>
+        <div class="steps">
+          <div class="step done"><div class="dot">✓</div><div class="label">申请提交</div></div>
+          <div class="step done"><div class="dot">✓</div><div class="label">窗口受理</div></div>
+          <div class="step done"><div class="dot">✓</div><div class="label">材料初审</div></div>
+          <div class="step active"><div class="dot">4</div><div class="label">实质审核</div></div>
+          <div class="step"><div class="dot">5</div><div class="label">领导审批</div></div>
+          <div class="step"><div class="dot">6</div><div class="label">公示</div></div>
+          <div class="step"><div class="dot">7</div><div class="label">资金发放</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📜 我的电子证照 <span style="font-size:12px;color:#999;font-weight:normal;">模块B5</span></div>
+      <div class="row">
+        <div class="col-4"><div style="border:1px solid #e8e8e8; border-radius:8px; padding:16px; text-align:center;"><div style="font-size:32px;">📜</div><div style="font-weight:bold;margin-top:8px;">社会保障卡</div><div style="font-size:12px;color:#999;margin-top:4px;">****1234 | 有效</div><button class="btn btn-default btn-sm" style="margin-top:8px;">下载PDF</button></div></div>
+        <div class="col-4"><div style="border:1px solid #e8e8e8; border-radius:8px; padding:16px; text-align:center;"><div style="font-size:32px;">📜</div><div style="font-weight:bold;margin-top:8px;">教师资格证</div><div style="font-size:12px;color:#999;margin-top:4px;">****5678 | 有效</div><button class="btn btn-default btn-sm" style="margin-top:8px;">下载PDF</button></div></div>
+        <div class="col-4"><div class="placeholder-box" style="height:120px;">暂无更多证照</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 政民互动 ============ -->
+<div class="page" id="c-interaction">
+  <div style="max-width:1000px; margin:0 auto; padding:24px;">
+    <div class="row">
+      <div class="col-8">
+        <div class="card">
+          <div class="card-title">✍️ 我要留言 <span style="font-size:12px;color:#999;font-weight:normal;">模块C1</span></div>
+          <div class="form-group"><label>留言类型 <span class="required">*</span></label><div class="radio-group"><label><input type="radio" name="msgType" checked> 意见建议</label><label><input type="radio" name="msgType"> 投诉</label><label><input type="radio" name="msgType"> 咨询</label><label><input type="radio" name="msgType"> 求助</label><label><input type="radio" name="msgType"> 表扬</label></div></div>
+          <div class="form-row"><div class="form-group"><label>受理部门 <span class="required">*</span></label><select><option>教育部</option><option>社会保障部</option><option>财政部</option></select></div><div class="form-group"><label>是否匿名</label><div class="radio-group"><label><input type="radio" name="anon" checked> 实名(优先处理)</label><label><input type="radio" name="anon"> 匿名</label></div></div></div>
+          <div class="form-group"><label>标题 <span class="required">*</span></label><input type="text" placeholder="请输入留言标题"></div>
+          <div class="form-group"><label>内容 <span class="required">*</span></label><textarea placeholder="请输入留言内容..."></textarea></div>
+          <div class="form-group"><label>附件</label><div class="upload-area">📎 点击或拖拽上传图片/文档 (最多5个, 单个≤10MB)</div></div>
+          <div class="form-group"><label><input type="checkbox"> 我已阅读并同意《留言须知》</label></div>
+          <button class="btn btn-primary" style="width:100%;">提交留言</button>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card">
+          <div class="card-title">💬 热门留言</div>
+          <div class="message-item" style="border-left-color:#52c41a;">
+            <div class="msg-header"><span class="msg-title">公租房分配建议</span></div>
+            <div class="msg-content">建议增加线上申请渠道，方便群众...</div>
+            <div style="background:#f5f5f5; padding:8px; border-radius:4px; margin-top:8px; font-size:12px; color:#666;"><b>部门回复：</b>感谢您的建议，线上申请渠道已上线...</div>
+            <div class="msg-footer"><span>👍 234</span><span>07-14</span></div>
+          </div>
+          <div class="message-item" style="border-left-color:#1890ff;">
+            <div class="msg-header"><span class="msg-title">税务办理表扬</span></div>
+            <div class="msg-content">线上税务办理非常便捷，给政府点赞！</div>
+            <div style="background:#f5f5f5; padding:8px; border-radius:4px; margin-top:8px; font-size:12px; color:#666;"><b>部门回复：</b>感谢您的认可，我们将继续优化服务...</div>
+            <div class="msg-footer"><span>👍 189</span><span>07-12</span></div>
+          </div>
+          <div class="message-item" style="border-left-color:#fa8c16;">
+            <div class="msg-header"><span class="msg-title">社保卡补办咨询</span></div>
+            <div class="msg-content">社保卡丢失了怎么补办？需要什么材料？</div>
+            <div style="background:#f5f5f5; padding:8px; border-radius:4px; margin-top:8px; font-size:12px; color:#666;"><b>部门回复：</b>您可通过"办事服务-社保卡申领"在线补办...</div>
+            <div class="msg-footer"><span>👍 156</span><span>07-13</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 依申请公开 ============ -->
+<div class="page" id="c-disclosure">
+  <div style="max-width:900px; margin:0 auto; padding:24px;">
+    <div class="card">
+      <div class="card-title">📄 依申请公开 - 在线申请 <span style="font-size:12px;color:#999;font-weight:normal;">模块C3</span></div>
+      <div style="background:#fff7e6; border:1px solid #ffd591; padding:12px; border-radius:4px; margin-bottom:16px; font-size:13px; color:#fa8c16;">⚠ <b>申请须知：</b>申请前请先查阅主动公开目录；自收到申请之日起20个工作日内答复；每份申请仅限一项政府信息。</div>
+      <div class="form-group"><label>申请人类型 <span class="required">*</span></label><div class="radio-group"><label><input type="radio" name="appType" checked> 公民</label><label><input type="radio" name="appType"> 法人/组织</label></div></div>
+      <div class="form-row"><div class="form-group"><label>姓名 <span class="required">*</span></label><input type="text"></div><div class="form-group"><label>证件号 <span class="required">*</span></label><input type="text" placeholder="身份证号"></div></div>
+      <div class="form-row"><div class="form-group"><label>手机 <span class="required">*</span></label><input type="text"></div><div class="form-group"><label>联系地址</label><input type="text"></div></div>
+      <div class="form-group"><label>所需信息名称 <span class="required">*</span></label><input type="text" placeholder="请输入所需政府信息名称"></div>
+      <div class="form-group"><label>信息内容描述 <span class="required">*</span></label><textarea placeholder="请详细描述所需信息内容..."></textarea></div>
+      <div class="form-group"><label>申请用途</label><input type="text" placeholder="如：学术研究、个人了解等"></div>
+      <div class="form-group"><label>身份证明 <span class="required">*</span></label><div class="upload-area">📎 上传身份证/营业执照</div></div>
+      <div class="form-group"><label>送达方式</label><div class="radio-group"><label><input type="radio" name="delivery" checked> 在线查看</label><label><input type="radio" name="delivery"> 邮寄纸质</label><label><input type="radio" name="delivery"> 现场领取</label></div></div>
+      <div class="form-group"><label><input type="checkbox"> 我已阅读并同意申请须知</label></div>
+      <div style="display:flex; gap:8px;"><button class="btn btn-primary">提交申请</button><button class="btn btn-default">查询进度</button></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 申请进度 <span style="font-size:12px;color:#999;font-weight:normal;">模块C4</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+        <div><b>XX财政预算报告</b> <span class="tag tag-blue">审核中</span></div>
+        <div style="font-size:12px;color:#999;">申请编号: DA20260001 | 剩余10个工作日</div>
+      </div>
+      <div class="steps">
+        <div class="step done"><div class="dot">✓</div><div class="label">形式审查</div></div>
+        <div class="step done"><div class="dot">✓</div><div class="label">受理登记</div></div>
+        <div class="step active"><div class="dot">3</div><div class="label">信息审查</div></div>
+        <div class="step"><div class="dot">4</div><div class="label">答复制作</div></div>
+        <div class="step"><div class="dot">5</div><div class="label">答复审核</div></div>
+        <div class="step"><div class="dot">6</div><div class="label">答复送达</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ C端 部门集约 ============ -->
+<div class="page" id="c-dept">
+  <div style="max-width:1200px; margin:0 auto; padding:24px;">
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button class="btn btn-primary btn-sm">📚 教育部</button><button class="btn btn-default btn-sm">🛡️ 社会保障部</button><button class="btn btn-default btn-sm">💰 财政部</button>
+    </div>
+    <div class="row">
+      <div class="col-8">
+        <div class="card">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+            <div style="width:48px;height:48px;background:#1890ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">📚</div>
+            <div><div style="font-size:20px;font-weight:bold;">教育部</div><div style="font-size:12px;color:#999;">集约化子站 | 模块D1</div></div>
+          </div>
+          <div style="border-bottom:2px solid #1890ff; margin-bottom:16px;"></div>
+          <div class="row">
+            <div class="col-6">
+              <div class="card" style="background:#fafafa; margin:0;"><div class="card-title" style="font-size:14px;">📢 通知公告</div><ul style="font-size:13px; line-height:2;"><li style="display:flex;justify-content:space-between;"><span>关于2026年教师资格认定工作的通知</span><span style="color:#999;">07-10</span></li><li style="display:flex;justify-content:space-between;"><span>关于高校毕业生就业补贴申报的通知</span><span style="color:#999;">07-08</span></li><li style="display:flex;justify-content:space-between;"><span>关于做好秋季开学准备工作的通知</span><span style="color:#999;">07-05</span></li><li style="display:flex;justify-content:space-between;"><span>2026年招生考试政策解读</span><span style="color:#999;">07-01</span></li></ul></div>
+            </div>
+            <div class="col-6">
+              <div class="card" style="background:#fafafa; margin:0;"><div class="card-title" style="font-size:14px;">📋 办事入口</div><div class="row" style="gap:8px;"><div class="col-6"><div class="service-card" style="padding:12px;"><div class="icon">📚</div><div class="name">教师资格认定</div></div></div><div class="col-6"><div class="service-card" style="padding:12px;"><div class="icon">🎓</div><div class="name">就业补贴申请</div></div></div><div class="col-6"><div class="service-card" style="padding:12px;"><div class="icon">📝</div><div class="name">招生考试</div></div></div><div class="col-6"><div class="service-card" style="padding:12px;"><div class="icon">📖</div><div class="name">教育政策</div></div></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📄 政策文件 <span style="font-size:12px;color:#999;font-weight:normal;">模块D2 CMS内容</span></div>
+          <table class="data-table"><tr><th>标题</th><th>文号</th><th>发布日期</th><th>浏览</th></tr><tr><td>教育部关于XX工作的通知</td><td>教人函〔2026〕XX号</td><td>2026-07-01</td><td>1234</td></tr><tr><td>教育部关于YY的指导意见</td><td>教基函〔2026〕XX号</td><td>2026-06-28</td><td>2345</td></tr><tr><td>关于做好ZZ工作的实施意见</td><td>教高函〔2026〕XX号</td><td>2026-06-20</td><td>987</td></tr></table>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card">
+          <div class="card-title">📂 信息公开目录 <span style="font-size:12px;color:#999;font-weight:normal;">模块D4</span></div>
+          <ul style="font-size:13px; line-height:2.2;">
+            <li>▼ 机构职能</li><li style="padding-left:16px;">› 机构简介</li><li style="padding-left:16px;">› 领导信息</li><li style="padding-left:16px;">› 内设机构</li>
+            <li>▼ 政策文件</li><li style="padding-left:16px;">› 规章制度</li><li style="padding-left:16px;">› 规范性文件</li>
+            <li>▶ 规划计划</li><li>▶ 财政信息</li><li>▶ 人事信息</li>
+            <li style="color:#1890ff;">📄 信息公开指南</li><li style="color:#1890ff;">📄 信息公开年报</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ============         B端 - 政府管理端            ============ -->
+<!-- ============================================================ -->
+
+<div class="page" id="b-page-wrapper" style="display:none;">
+<div class="layout-flex">
+  <div class="sidebar">
+    <div class="menu-group-title">核心功能</div>
+    <div class="menu-item active" onclick="showPageB('b-dashboard',this)">📊 数据大屏</div>
+    <div class="menu-item" onclick="showPageB('b-stats',this)">📈 统计报表</div>
+    <div class="menu-item" onclick="showPageB('b-interaction',this)">💬 互动管理</div>
+    <div class="menu-item" onclick="showPageB('b-service',this)">📋 办事审批</div>
+    <div class="menu-item" onclick="showPageB('b-disclosure',this)">📄 依申请审核</div>
+    <div class="menu-item" onclick="showPageB('b-cms',this)">📝 内容管理</div>
+    <div class="menu-item" onclick="showPageB('b-performance',this)">🏆 绩效管理</div>
+    <div class="menu-group-title">系统管理</div>
+    <div class="menu-item" onclick="showPageB('b-system',this)">⚙️ 系统管理</div>
+  </div>
+  <div class="content-area" id="bContent">
+
+    <!-- B端 数据大屏 -->
+    <div class="b-sub-page active" id="b-dashboard">
+      <div class="dashboard-bg" style="margin:-20px; border-radius:8px;">
+        <div style="text-align:center; margin-bottom:20px;"><h2 style="color:#4fc3f7; font-size:24px;">政务集约化平台运行大数据</h2></div>
+        <div class="row" style="margin-bottom:16px;">
+          <div class="col-3"><div class="stat-card blue"><div class="stat-title">总访问量 PV</div><div class="stat-value">1,256,789</div><div class="stat-trend up">↑ 12% 环比</div></div></div>
+          <div class="col-3"><div class="stat-card green"><div class="stat-title">独立访客 UV</div><div class="stat-value">234,567</div><div class="stat-trend up">↑ 8% 环比</div></div></div>
+          <div class="col-3"><div class="stat-card orange"><div class="stat-title">办事项量</div><div class="stat-value">12,345</div><div class="stat-trend up">↑ 15% 环比</div></div></div>
+          <div class="col-3"><div class="stat-card purple"><div class="stat-title">AI问答次数</div><div class="stat-value">89,012</div><div class="stat-trend up">↑ 22% 环比</div></div></div>
+        </div>
+        <div class="row">
+          <div class="col-8">
+            <div class="card"><div class="card-title">📊 访问趋势 (近7天)</div>
+              <div class="chart-placeholder" style="height:220px;">
+                <svg viewBox="0 0 600 200" style="width:100%;height:100%;position:absolute;top:0;left:0;">
+                  <polyline points="50,160 130,120 210,140 290,80 370,100 450,60 530,90" fill="none" stroke="#4fc3f7" stroke-width="3"/>
+                  <polyline points="50,180 130,160 210,170 290,140 370,150 450,120 530,130" fill="none" stroke="#4caf50" stroke-width="2" stroke-dasharray="5"/>
+                </svg>
+                <div style="position:relative;z-index:1;font-size:12px;">━ PV访问量 (蓝)</div>
+                <div style="position:relative;z-index:1;font-size:12px;margin-top:20px;">┄ UV独立访客 (绿)</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="card"><div class="card-title">🏛️ 部门访问排名</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:12px;width:60px;">教育部</span><div style="flex:1;height:24px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;"><div style="width:80%;height:100%;background:linear-gradient(90deg,#4fc3f7,#1890ff);border-radius:4px;"></div></div><span style="font-size:11px;color:#4fc3f7;width:40px;">8.2万</span></div>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:12px;width:60px;">社保部</span><div style="flex:1;height:24px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;"><div style="width:60%;height:100%;background:linear-gradient(90deg,#4caf50,#388e3c);border-radius:4px;"></div></div><span style="font-size:11px;color:#4caf50;width:40px;">6.1万</span></div>
+                <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:12px;width:60px;">财政部</span><div style="flex:1;height:24px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden;"><div style="width:40%;height:100%;background:linear-gradient(90deg,#ff9800,#f57c00);border-radius:4px;"></div></div><span style="font-size:11px;color:#ff9800;width:40px;">4.0万</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-4"><div class="card"><div class="card-title">📊 办事量分布</div><div style="width:140px;height:140px;border-radius:50%;background:conic-gradient(#4fc3f7 0 35%, #4caf50 35% 60%, #ff9800 60% 80%, #ab47bc 80% 100%);margin:0 auto;position:relative;"><div style="position:absolute;top:30%;left:30%;width:40%;height:40%;background:#0a1a35;border-radius:50%;"></div></div><div style="display:flex;flex-direction:column;gap:4px;margin-top:12px;font-size:12px;"><div><span style="color:#4fc3f7;">■</span> 就业补贴 35%</div><div><span style="color:#4caf50;">■</span> 社保卡 25%</div><div><span style="color:#ff9800;">■</span> 公租房 20%</div><div><span style="color:#ab47bc;">■</span> 其他 20%</div></div></div></div>
+          <div class="col-4"><div class="card"><div class="card-title">✅ 办结率</div><div style="text-align:center;padding:30px 0;"><div style="font-size:48px;color:#4caf50;font-weight:bold;">92%</div><div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:8px;">办结率(已办结/总申请)</div></div></div></div>
+          <div class="col-4"><div class="card"><div class="card-title">⭐ 群众满意度</div><div style="text-align:center;padding:20px 0;"><div style="font-size:36px;color:#4fc3f7;font-weight:bold;">4.6<span style="font-size:16px;color:rgba(255,255,255,.4);">/5</span></div><div style="font-size:20px;color:#ffd700;margin-top:8px;">★★★★☆</div><div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:8px;">基于3,456条评价</div></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B端 统计报表 -->
+    <div class="b-sub-page" id="b-stats">
+      <div class="card"><div class="card-title">📈 统计报表 <span style="font-size:12px;color:#999;font-weight:normal;">模块E1-E2</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <span style="font-size:13px;">时间:</span><select style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;"><option>日</option><option>周</option><option selected>月</option><option>年</option></select>
+          <span style="font-size:13px;">部门:</span><select style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;"><option>全部</option><option>教育部</option><option>社会保障部</option><option>财政部</option></select>
+          <button class="btn btn-primary btn-sm">查询</button><button class="btn btn-default btn-sm">📊 导出Excel</button><button class="btn btn-default btn-sm">📄 导出PDF</button>
+        </div>
+        <div class="row" style="margin-bottom:16px;">
+          <div class="col-3"><div class="stat-card blue"><div class="stat-title">总访问量</div><div class="stat-value">12,345</div><div class="stat-trend up">↑ 5%</div></div></div>
+          <div class="col-3"><div class="stat-card green"><div class="stat-title">内容发布量</div><div class="stat-value">56</div><div class="stat-trend down">↓ 2%</div></div></div>
+          <div class="col-3"><div class="stat-card orange"><div class="stat-title">办事申请量</div><div class="stat-value">234</div><div class="stat-trend up">↑ 10%</div></div></div>
+          <div class="col-3"><div class="stat-card purple"><div class="stat-title">AI问答量</div><div class="stat-value">1,234</div><div class="stat-trend up">↑ 15%</div></div></div>
+        </div>
+        <table class="data-table">
+          <tr><th>指标</th><th>数值</th><th>环比</th><th>同比</th><th>趋势</th></tr>
+          <tr><td>总访问量 PV</td><td>12,345</td><td style="color:#52c41a;">+5%</td><td style="color:#52c41a;">+15%</td><td>↑</td></tr>
+          <tr><td>独立访客 UV</td><td>3,456</td><td style="color:#52c41a;">+3%</td><td style="color:#52c41a;">+12%</td><td>↑</td></tr>
+          <tr><td>内容发布量</td><td>56</td><td style="color:#f5222d;">-2%</td><td style="color:#52c41a;">+8%</td><td>↓</td></tr>
+          <tr><td>办事申请量</td><td>234</td><td style="color:#52c41a;">+10%</td><td style="color:#52c41a;">+20%</td><td>↑</td></tr>
+          <tr><td>留言量</td><td>89</td><td style="color:#52c41a;">+6%</td><td style="color:#52c41a;">+3%</td><td>↑</td></tr>
+          <tr><td>AI问答量</td><td>1,234</td><td style="color:#52c41a;">+15%</td><td>—</td><td>↑</td></tr>
+          <tr><td>依申请公开量</td><td>12</td><td style="color:#52c41a;">+8%</td><td>—</td><td>↑</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- B端 互动管理 -->
+    <div class="b-sub-page" id="b-interaction">
+      <div class="card"><div class="card-title">💬 留言管理工作台 <span style="font-size:12px;color:#999;font-weight:normal;">模块C2</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm">待处理(12)</button><button class="btn btn-default btn-sm">处理中(8)</button><button class="btn btn-default btn-sm">已回复</button><button class="btn btn-warning btn-sm">超时(1)</button><button class="btn btn-default btn-sm">全部</button>
+          <span style="color:#999;margin-left:auto;">|</span>
+          <select style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;font-size:12px;"><option>全部部门</option><option>教育部</option><option>社保部</option></select>
+          <input type="text" style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;font-size:12px;width:120px;" placeholder="搜索...">
+        </div>
+        <table class="data-table">
+          <tr><th>编号</th><th>标题</th><th>类型</th><th>部门</th><th>状态</th><th>剩余时限</th><th>操作</th></tr>
+          <tr><td>MSG20260001</td><td>教师资格认定问题</td><td>咨询</td><td>教育部</td><td><span class="tag tag-orange">待处理</span></td><td>3天</td><td><button class="btn btn-primary btn-sm">审批</button></td></tr>
+          <tr><td>MSG20260002</td><td>社保卡申领投诉</td><td>投诉</td><td>社保部</td><td><span class="tag tag-blue">处理中</span></td><td>1天</td><td><button class="btn btn-primary btn-sm">审批</button></td></tr>
+          <tr><td>MSG20260003</td><td>公租房分配建议</td><td>建议</td><td>住房部</td><td><span class="tag tag-orange">待处理</span></td><td>5天</td><td><button class="btn btn-primary btn-sm">审批</button></td></tr>
+          <tr style="background:#fff1f0;"><td>MSG20260004</td><td>⚠ 税务办理咨询</td><td>咨询</td><td>财政部</td><td><span class="tag tag-red">超时</span></td><td style="color:#f5222d;">-1天</td><td><button class="btn btn-danger btn-sm">催办</button></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- B端 办事审批 -->
+    <div class="b-sub-page" id="b-service">
+      <div class="card"><div class="card-title">📋 审批工作台 <span style="font-size:12px;color:#999;font-weight:normal;">模块B3 Flowable</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;"><button class="btn btn-primary btn-sm">待办任务(8)</button><button class="btn btn-default btn-sm">已办任务</button><button class="btn btn-default btn-sm">全部任务</button></div>
+        <table class="data-table">
+          <tr><th>申请编号</th><th>事项名称</th><th>申请人</th><th>提交时间</th><th>当前节点</th><th>剩余时限</th><th>操作</th></tr>
+          <tr><td>BS202600001</td><td>就业补贴申请</td><td>张三</td><td>07-15</td><td>材料初审</td><td style="color:#52c41a;">3天</td><td><button class="btn btn-primary btn-sm">审批</button> <button class="btn btn-default btn-sm">转办</button></td></tr>
+          <tr><td>BS202600002</td><td>社保卡申领</td><td>李四</td><td>07-14</td><td>窗口受理</td><td style="color:#fa8c16;">1天</td><td><button class="btn btn-primary btn-sm">审批</button> <button class="btn btn-default btn-sm">转办</button></td></tr>
+          <tr><td>BS202600003</td><td>公租房申请</td><td>王五</td><td>07-13</td><td>实质审核</td><td style="color:#52c41a;">10天</td><td><button class="btn btn-primary btn-sm">审批</button> <button class="btn btn-default btn-sm">转办</button></td></tr>
+          <tr><td>BS202600004</td><td>教师资格认定</td><td>赵六</td><td>07-12</td><td>领导审批</td><td style="color:#52c41a;">5天</td><td><button class="btn btn-primary btn-sm">审批</button> <button class="btn btn-default btn-sm">转办</button></td></tr>
+        </table>
+      </div>
+      <div class="card"><div class="card-title">📈 审批统计</div>
+        <div class="row">
+          <div class="col-3"><div class="stat-card blue"><div class="stat-title">本月审批量</div><div class="stat-value">234</div><div class="stat-trend up">↑ 15%</div></div></div>
+          <div class="col-3"><div class="stat-card green"><div class="stat-title">平均办理时长</div><div class="stat-value">18<span style="font-size:14px;">天</span></div><div class="stat-trend up">↓ 缩短2天</div></div></div>
+          <div class="col-3"><div class="stat-card orange"><div class="stat-title">一次性通过率</div><div class="stat-value">85%</div></div></div>
+          <div class="col-3"><div class="stat-card purple"><div class="stat-title">超时率</div><div class="stat-value">3.2%</div><div class="stat-trend down">↓ 1.5%</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B端 依申请审核 -->
+    <div class="b-sub-page" id="b-disclosure">
+      <div class="card"><div class="card-title">📄 依申请公开审核工作台 <span style="font-size:12px;color:#999;font-weight:normal;">模块C4</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;"><button class="btn btn-primary btn-sm">待受理(5)</button><button class="btn btn-default btn-sm">审核中(8)</button><button class="btn btn-default btn-sm">待答复(3)</button><button class="btn btn-warning btn-sm">超时(1)</button><button class="btn btn-default btn-sm">已办结</button></div>
+        <table class="data-table">
+          <tr><th>申请编号</th><th>信息名称</th><th>申请人</th><th>状态</th><th>剩余时限</th><th>操作</th></tr>
+          <tr><td>DA20260001</td><td>XX财政预算报告</td><td>张三</td><td><span class="tag tag-blue">审核中</span></td><td style="color:#52c41a;">10天</td><td><button class="btn btn-primary btn-sm">审核</button></td></tr>
+          <tr><td>DA20260002</td><td>XX政策制定依据</td><td>李四</td><td><span class="tag tag-orange">待受理</span></td><td style="color:#52c41a;">18天</td><td><button class="btn btn-primary btn-sm">受理</button></td></tr>
+          <tr><td>DA20260003</td><td>XX会议纪要</td><td>王五</td><td><span class="tag tag-gray">待答复</span></td><td style="color:#fa8c16;">2天</td><td><button class="btn btn-primary btn-sm">制作答复</button></td></tr>
+          <tr style="background:#fff1f0;"><td>DA20260004</td><td>XX统计数据</td><td>赵六</td><td><span class="tag tag-red">超时</span></td><td style="color:#f5222d;">-2天</td><td><button class="btn btn-danger btn-sm">紧急处理</button></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- B端 内容管理 -->
+    <div class="b-sub-page" id="b-cms">
+      <div class="card"><div class="card-title">📝 内容管理 <span style="font-size:12px;color:#999;font-weight:normal;">模块D2-D3 CMS</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;"><button class="btn btn-primary btn-sm">待审(5)</button><button class="btn btn-default btn-sm">已发布</button><button class="btn btn-default btn-sm">草稿</button><button class="btn btn-default btn-sm">退回</button><button class="btn btn-success btn-sm">+ 新建内容</button></div>
+        <table class="data-table">
+          <tr><th>标题</th><th>子站</th><th>栏目</th><th>提交人</th><th>状态</th><th>发布时间</th><th>操作</th></tr>
+          <tr><td>关于教师资格认定工作的通知</td><td>教育部</td><td>通知公告</td><td>张三</td><td><span class="tag tag-orange">待审核</span></td><td>—</td><td><button class="btn btn-primary btn-sm">审核</button></td></tr>
+          <tr><td>2026年度预算公开说明</td><td>财政部</td><td>政策文件</td><td>李四</td><td><span class="tag tag-green">已发布</span></td><td>07-11</td><td><button class="btn btn-default btn-sm">编辑</button> <button class="btn btn-danger btn-sm">下线</button></td></tr>
+          <tr><td>社保卡申领指南更新</td><td>社保部</td><td>办事指南</td><td>王五</td><td><span class="tag tag-orange">待审核</span></td><td>—</td><td><button class="btn btn-primary btn-sm">审核</button></td></tr>
+          <tr><td>就业补贴政策解读</td><td>教育部</td><td>政策文件</td><td>赵六</td><td><span class="tag tag-red">退回</span></td><td>—</td><td><button class="btn btn-default btn-sm">编辑</button></td></tr>
+        </table>
+      </div>
+      <div class="card"><div class="card-title">🔧 搜索索引管理 <span style="font-size:12px;color:#999;font-weight:normal;">模块D5</span></div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div style="flex:1;font-size:13px;color:#666;line-height:1.8;">索引状态: <span class="tag tag-green">正常</span> 文档总数: 12,568 | 最后同步: 2026-07-15 14:30<br>CMS内容: 8,234条 | 政策文件: 1,526条 | 办事指南: 256条 | 公告: 1,892条</div>
+          <button class="btn btn-primary">全量重建</button><button class="btn btn-default">增量同步</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- B端 绩效管理 -->
+    <div class="b-sub-page" id="b-performance">
+      <div class="card"><div class="card-title">🏆 服务绩效看板 <span style="font-size:12px;color:#999;font-weight:normal;">模块E3</span> <span style="font-size:13px;font-weight:normal;">周期: </span><select style="padding:4px 8px;border:1px solid #d9d9d9;border-radius:4px;"><option>2026年7月</option><option>2026年6月</option></select></div>
+        <table class="data-table">
+          <tr><th>排名</th><th>部门</th><th>总分</th><th>办结率</th><th>满意度</th><th>回复率</th><th>平均时效</th><th>趋势</th></tr>
+          <tr><td style="font-weight:bold;color:#fa8c16;">🥇 1</td><td>教育部</td><td style="font-weight:bold;color:#52c41a;">92.5</td><td>95%</td><td>4.7</td><td>98%</td><td>15天</td><td style="color:#52c41a;">↑</td></tr>
+          <tr><td style="font-weight:bold;color:#999;">🥈 2</td><td>社保部</td><td style="font-weight:bold;color:#52c41a;">88.3</td><td>91%</td><td>4.5</td><td>96%</td><td>18天</td><td style="color:#52c41a;">↑</td></tr>
+          <tr><td style="font-weight:bold;color:#cd7f32;">🥉 3</td><td>财政部</td><td style="font-weight:bold;">85.6</td><td>88%</td><td>4.3</td><td>93%</td><td>20天</td><td style="color:#f5222d;">↓</td></tr>
+        </table>
+        <div style="margin-top:16px;display:flex;gap:8px;"><button class="btn btn-primary btn-sm">考核通报</button><button class="btn btn-default btn-sm">指标配置</button><button class="btn btn-default btn-sm">申诉管理</button><button class="btn btn-default btn-sm">历史趋势</button></div>
+      </div>
+      <div class="card"><div class="card-title">⚙️ 考核指标配置</div>
+        <table class="data-table">
+          <tr><th>指标</th><th>维度</th><th>权重</th><th>计分方式</th></tr>
+          <tr><td>办结率</td><td>办事效率</td><td>20%</td><td>办结率×100分</td></tr>
+          <tr><td>平均办理时长</td><td>办事效率</td><td>15%</td><td>标准时限内满分，超时扣分</td></tr>
+          <tr><td>群众满意度</td><td>服务质量</td><td>20%</td><td>平均满意度×20</td></tr>
+          <tr><td>留言回复率</td><td>互动响应</td><td>10%</td><td>回复率×100</td></tr>
+          <tr><td>依申请答复率</td><td>依申请公开</td><td>3%</td><td>答复率×100</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- B端 系统管理 -->
+    <div class="b-sub-page" id="b-system">
+      <div class="row">
+        <div class="col-6"><div class="card"><div class="card-title">👥 用户管理 <span style="font-size:12px;color:#999;font-weight:normal;">模块E4</span> <button class="btn btn-primary btn-sm" style="float:right;">+ 新增</button></div><table class="data-table"><tr><th>用户名</th><th>姓名</th><th>部门</th><th>角色</th><th>状态</th><th>操作</th></tr><tr><td>admin</td><td>管理员</td><td>平台</td><td>超级管理员</td><td><span class="tag tag-green">启用</span></td><td><button class="btn btn-default btn-sm">编辑</button></td></tr><tr><td>zhang</td><td>张三</td><td>教育部</td><td>内容管理员</td><td><span class="tag tag-green">启用</span></td><td><button class="btn btn-default btn-sm">编辑</button></td></tr><tr><td>li</td><td>李四</td><td>社保部</td><td>审批员</td><td><span class="tag tag-green">启用</span></td><td><button class="btn btn-default btn-sm">编辑</button></td></tr></table></div></div>
+        <div class="col-6"><div class="card"><div class="card-title">🔑 角色权限管理 <span style="font-size:12px;color:#999;font-weight:normal;">模块E4 RBAC</span></div><table class="data-table"><tr><th>角色</th><th>描述</th><th>用户数</th><th>权限数</th><th>操作</th></tr><tr><td>超级管理员</td><td>全部权限</td><td>1</td><td>156</td><td><button class="btn btn-default btn-sm">权限</button></td></tr><tr><td>内容管理员</td><td>内容管理</td><td>5</td><td>32</td><td><button class="btn btn-default btn-sm">权限</button></td></tr><tr><td>审批员</td><td>办事审批</td><td>12</td><td>28</td><td><button class="btn btn-default btn-sm">权限</button></td></tr><tr><td>督办员</td><td>留言督办</td><td>3</td><td>18</td><td><button class="btn btn-default btn-sm">权限</button></td></tr></table></div></div>
+      </div>
+      <div class="card"><div class="card-title">🔔 消息配置 <span style="font-size:12px;color:#999;font-weight:normal;">模块E5</span></div><table class="data-table"><tr><th>消息类型</th><th>说明</th><th>站内</th><th>短信</th><th>微信</th></tr><tr><td>办事进度通知</td><td>流程节点变更通知</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td>留言回复通知</td><td>留言被回复后通知</td><td>✅</td><td>✅</td><td>—</td></tr><tr><td>依申请进度</td><td>依申请公开进度变更</td><td>✅</td><td>—</td><td>—</td></tr><tr><td>超时预警</td><td>各模块超时预警</td><td>✅</td><td>✅</td><td>—</td></tr></table></div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+var navMap = {
+  'c-home':'首页','c-search':'智能搜索','c-chat':'智能问答','c-service':'办事服务','c-interaction':'政民互动','c-disclosure':'依申请公开','c-dept':'部门集约'
+};
+
+// ===== B端隔离登录流程 =====
+function openBLogin() {
+  document.getElementById('bLoginOverlay').classList.add('show');
+}
+function closeBLogin() {
+  document.getElementById('bLoginOverlay').classList.remove('show');
+}
+function doBLogin() {
+  var u = document.getElementById('bUsername').value;
+  var p = document.getElementById('bPassword').value;
+  if (!u || !p) { alert('请输入工号和密码'); return; }
+  closeBLogin();
+  enterBEnd();
+}
+function enterBEnd() {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('cNav').style.display='none';
+  document.getElementById('bNav').style.display='flex';
+  document.getElementById('b-page-wrapper').style.display='block';
+  document.getElementById('endBadge').textContent='管理端';
+  document.getElementById('userName').innerHTML = '👤 管理员 / 系统管理';
+  document.getElementById('bExitBtn').style.display='inline-block';
+  showBSub('b-dashboard');
+  document.querySelectorAll('.sidebar .menu-item').forEach(function(m){m.classList.remove('active');});
+  document.querySelector('.sidebar .menu-item').classList.add('active');
+}
+function exitBEnd() {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('cNav').style.display='flex';
+  document.getElementById('bNav').style.display='none';
+  document.getElementById('c-home').classList.add('active');
+  document.querySelectorAll('#cNav li').forEach(function(l){l.classList.remove('active');});
+  document.getElementById('cNav').children[0].classList.add('active');
+  document.getElementById('endBadge').textContent='群众端';
+  document.getElementById('userName').innerHTML = '👤 张三 / 个人用户';
+  document.getElementById('bExitBtn').style.display='none';
+  document.getElementById('b-page-wrapper').style.display='none';
+}
+
+function showPageC(id, el) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  if (el) {
+    document.querySelectorAll('#cNav li').forEach(function(l){l.classList.remove('active');});
+    el.classList.add('active');
+  }
+}
+function showPageB(id, el) {
+  showBSub(id);
+  if (el) {
+    document.querySelectorAll('.sidebar .menu-item').forEach(function(m){m.classList.remove('active');});
+    el.classList.add('active');
+  }
+}
+function showBSub(id) {
+  document.querySelectorAll('.b-sub-page').forEach(function(p){p.classList.remove('active');});
+  var target=document.getElementById(id);
+  if(target) target.classList.add('active');
+}
+function navTo(pageId) {
+  if (document.getElementById('bExitBtn') && document.getElementById('bExitBtn').style.display!=='none') {
+    exitBEnd();
+  }
+  setTimeout(function(){
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    document.getElementById(pageId).classList.add('active');
+    document.querySelectorAll('#cNav li').forEach(function(l){
+      l.classList.remove('active');
+      if (l.textContent.indexOf(navMap[pageId])>=0) l.classList.add('active');
+    });
+  },50);
+}
+</script>
+</body>
+</html>
