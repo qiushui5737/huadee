@@ -2,7 +2,7 @@ package com.gov.admin.controller;
 
 import com.gov.common.result.Result;
 import com.gov.common.result.PageResult;
-import com.gov.common.utils.JwtUtil;
+import com.gov.admin.service.AuthService;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
@@ -13,28 +13,27 @@ import java.util.*;
 @RequestMapping("/api/v1/admin")
 public class AdminController {
 
+    private final AuthService authService;
+
+    public AdminController(AuthService authService) {
+        this.authService = authService;
+    }
+
     // ===== E4-认证权限 =====
     @PostMapping("/auth/login")
     public Result<Map<String,Object>> login(@RequestBody Map<String,String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        // TODO: 校验用户名密码
-        String token = JwtUtil.generateToken(1L, username, "ADMIN");
-        Map<String,Object> result = new HashMap<>();
-        result.put("token", token);
-        result.put("username", username);
-        result.put("role", "系统管理员");
-        return Result.success(result, "登录成功");
+        return Result.success(authService.login(body.get("username"), body.get("password")), "登录成功");
     }
 
     @GetMapping("/auth/info")
-    public Result<Map<String,Object>> userInfo(@RequestHeader("Authorization") String token) {
-        // TODO: 从Token解析用户信息
-        Map<String,Object> result = new HashMap<>();
-        result.put("username", "管理员");
-        result.put("roles", List.of("ADMIN"));
-        result.put("permissions", List.of("*:*"));
-        return Result.success(result);
+    public Result<Map<String,Object>> userInfo(@RequestAttribute("jwtToken") String token) {
+        return Result.success(authService.userInfo(token));
+    }
+
+    @PostMapping("/auth/logout")
+    public Result<Void> logout(@RequestAttribute("jwtToken") String token) {
+        authService.logout(token);
+        return Result.success();
     }
 
     // ===== E3-绩效管理 =====
