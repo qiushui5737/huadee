@@ -23,8 +23,19 @@ const routes: RouteRecordRaw[] = [
       { path: 'interaction/suggest', name: 'submit-suggest', component: () => import('@/views/portal/SubmitSuggest.vue') },
       { path: 'disclosure', name: 'disclosure', component: () => import('@/views/portal/Disclosure.vue') },
       { path: 'questionnaire', name: 'questionnaire', component: () => import('@/views/portal/Questionnaire.vue') },
-      { path: 'dept', name: 'dept', component: () => import('@/views/portal/Dept.vue') }
+      { path: 'dept', name: 'dept', component: () => import('@/views/portal/Dept.vue') },
+      { path: 'profile', name: 'profile', component: () => import('@/views/portal/Profile.vue'), meta: { requiresPortalAuth: true } }
     ]
+  },
+  {
+    path: '/login',
+    name: 'portal-login',
+    component: () => import('@/views/admin/Login.vue')
+  },
+  {
+    path: '/register',
+    name: 'portal-register',
+    component: () => import('@/views/admin/Register.vue')
   },
   // ===== B端 政府管理端(隔离入口) =====
   {
@@ -68,15 +79,29 @@ router.beforeEach(async (to, _from, next) => {
       next({ name: 'admin-login' })
     } else {
       try {
-        await useUserStore().restoreSession()
+        await useUserStore().restoreSession('admin')
         next()
       } catch {
-        useUserStore().logout()
+        useUserStore().clearSession('admin')
         next({ name: 'admin-login' })
+      }
+    }
+  } else if (to.meta.requiresPortalAuth) {
+    if (!localStorage.getItem('c_token')) {
+      next({ name: 'portal-login', query: { redirect: to.fullPath } })
+    } else {
+      try {
+        await useUserStore().restoreSession('portal')
+        next()
+      } catch {
+        useUserStore().clearSession('portal')
+        next({ name: 'portal-login' })
       }
     }
   } else if ((to.name === 'admin-login' || to.name === 'admin-register') && localStorage.getItem('admin_token')) {
     next({ name: 'admin-dashboard' })
+  } else if ((to.name === 'portal-login' || to.name === 'portal-register') && localStorage.getItem('c_token')) {
+    next({ name: 'home' })
   } else {
     next()
   }

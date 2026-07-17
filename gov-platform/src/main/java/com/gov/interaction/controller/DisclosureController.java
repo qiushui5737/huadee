@@ -1,3 +1,4 @@
+
 package com.gov.interaction.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -95,62 +96,21 @@ public class DisclosureController {
     }
 
     private Map<String, Object> toMap(DisclosureApply a) {
-        return Map.of(
-                "id", a.getId() != null ? a.getId() : 0,
-                "applyNo", a.getApplyNo() != null ? a.getApplyNo() : "",
-                "applicant", a.getApplicant() != null ? a.getApplicant() : "",
-                "idCard", a.getIdCard() != null ? a.getIdCard() : "",
-                "phone", a.getPhone() != null ? a.getPhone() : "",
-                "content", a.getContent() != null ? a.getContent() : "",
-                "purpose", a.getPurpose() != null ? a.getPurpose() : "",
-                "acquireMethod", a.getAcquireMethod() != null ? a.getAcquireMethod() : "",
-                "status", a.getStatus() != null ? a.getStatus() : "",
-                "deadline", a.getDeadline() != null ? a.getDeadline().toString() : "",
-                "replyContent", a.getReplyContent() != null ? a.getReplyContent() : "",
-                "replyBy", a.getReplyBy() != null ? a.getReplyBy() : "",
-                "replyTime", a.getReplyTime() != null ? a.getReplyTime().toString() : "",
-                "createTime", a.getCreateTime() != null ? a.getCreateTime().toString() : ""
+        return Map.ofEntries(
+                Map.entry("id", a.getId() != null ? a.getId() : 0),
+                Map.entry("applyNo", a.getApplyNo() != null ? a.getApplyNo() : ""),
+                Map.entry("applicant", a.getApplicant() != null ? a.getApplicant() : ""),
+                Map.entry("idCard", a.getIdCard() != null ? a.getIdCard() : ""),
+                Map.entry("phone", a.getPhone() != null ? a.getPhone() : ""),
+                Map.entry("content", a.getContent() != null ? a.getContent() : ""),
+                Map.entry("purpose", a.getPurpose() != null ? a.getPurpose() : ""),
+                Map.entry("acquireMethod", a.getAcquireMethod() != null ? a.getAcquireMethod() : ""),
+                Map.entry("status", a.getStatus() != null ? a.getStatus() : ""),
+                Map.entry("deadline", a.getDeadline() != null ? a.getDeadline().toString() : ""),
+                Map.entry("replyContent", a.getReplyContent() != null ? a.getReplyContent() : ""),
+                Map.entry("replyBy", a.getReplyBy() != null ? a.getReplyBy() : ""),
+                Map.entry("replyTime", a.getReplyTime() != null ? a.getReplyTime().toString() : ""),
+                Map.entry("createTime", a.getCreateTime() != null ? a.getCreateTime().toString() : "")
         );
-    }
-}
-package com.gov.interaction.controller;
-
-import com.gov.common.result.Result;
-import com.gov.common.result.PageResult;
-import org.springframework.web.bind.annotation.*;
-import java.util.*;
-
-/**
- * C3-依申请公开申请端 & C4-依申请审核
- */
-@RestController
-@RequestMapping("/api/v1/disclosure")
-public class DisclosureController {
-
-    @PostMapping("/apply")
-    public Result<Map<String,Object>> apply(@RequestBody Map<String,Object> body) {
-        Map<String,Object> result = new HashMap<>();
-        result.put("applyNo", "YA2026" + System.currentTimeMillis() % 100000);
-        result.put("status", "已受理");
-        return Result.success(result, "申请提交成功");
-    }
-
-    @GetMapping("/progress/{applyNo}")
-    public Result<List<Map<String,Object>>> progress(@PathVariable String applyNo) {
-        return Result.success(Collections.emptyList());
-    }
-
-    @GetMapping("/list")
-    public Result<PageResult<Map<String,Object>>> list(
-            @RequestParam(required=false) String status,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return Result.success(PageResult.of(Collections.emptyList(), 0, page, size));
-    }
-
-    @PostMapping("/audit/{applyNo}")
-    public Result<Void> audit(@PathVariable String applyNo, @RequestBody Map<String,String> body) {
-        String action = body.get("action");
-        return Result.success();
     }
 }

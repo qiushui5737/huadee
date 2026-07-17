@@ -2,7 +2,7 @@
   <div class="register-page">
     <header class="header">
       <router-link to="/" class="brand"><span class="emblem">政</span><span><b>政府网站集约化平台</b><small>GOVERNMENT SERVICE PLATFORM</small></span></router-link>
-      <span>已有账号？<router-link to="/admin/login">返回登录</router-link></span>
+      <span>已有账号？<router-link :to="loginPath">返回登录</router-link></span>
     </header>
     <main>
       <div class="steps"><div class="active">1　填写账号资料</div><div>2　确认注册信息</div><div>3　完成</div></div>
@@ -30,12 +30,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { adminRegister, type RegisterData } from '@/api/admin'
-const router = useRouter(); const formRef = ref<FormInstance>(); const loading = ref(false); const agreed = ref(false)
+const router = useRouter(); const route = useRoute(); const formRef = ref<FormInstance>(); const loading = ref(false); const agreed = ref(false)
+const loginPath = computed(() => route.path.startsWith('/admin') ? '/admin/login' : '/login')
 const form = reactive<RegisterData>({ username:'', password:'', confirmPassword:'', realName:'', gender:'', idCard:'', phone:'', email:'', deptCode:'', address:'' })
 const validatePassword = (_r:any, value:string, callback:any) => /^(?=.*[A-Za-z])(?=.*[0-9]).{8,}$/.test(value) ? callback() : callback(new Error('密码至少8位，且必须包含字母和数字'))
 const validateConfirm = (_r:any, value:string, callback:any) => value === form.password ? callback() : callback(new Error('两次输入的密码不一致'))
@@ -52,7 +53,7 @@ async function submit(){
   if (!formRef.value || !await formRef.value.validate().catch(()=>false)) return
   if (!agreed.value) return ElMessage.warning('请先阅读并同意注册协议')
   loading.value=true
-  try { await adminRegister(form); ElMessage.success('注册成功，请使用新账号登录'); router.replace('/admin/login') } finally { loading.value=false }
+  try { await adminRegister(form); ElMessage.success('注册成功，请使用新账号登录'); router.replace(loginPath.value) } finally { loading.value=false }
 }
 </script>
 <style scoped>

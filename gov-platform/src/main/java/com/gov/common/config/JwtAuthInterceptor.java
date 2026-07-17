@@ -3,6 +3,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.common.result.Result;
 import com.gov.common.utils.JwtUtil;
 import com.gov.admin.service.TokenSessionService;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,15 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             if (JwtUtil.isValid(token) && tokenSessionService.isValid(token)) {
+                Claims claims = JwtUtil.parseToken(token);
+                String role = claims.get("role", String.class);
+                String uri = request.getRequestURI();
+                if (uri.startsWith("/api/v1/admin/") && !uri.startsWith("/api/v1/admin/auth/")
+                        && !"ADMIN".equals(role)) {
+                    response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
+                    objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
+                    return false;
+                }
                 request.setAttribute("jwtToken", token);
                 return true;
             }

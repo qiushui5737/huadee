@@ -10,6 +10,10 @@ export interface RegisterData {
 export const adminRegister = (data: RegisterData) => request.post('/admin/auth/register', data)
 export const adminInfo = () => request.get('/admin/auth/info')
 export const adminLogout = () => request.post('/admin/auth/logout')
+export const updateProfile = (data: { realName: string; gender: string; phone: string; email: string; address: string }) =>
+  request.put('/admin/auth/profile', data)
+export const changePassword = (data: { oldPassword: string; newPassword: string; confirmPassword: string }) =>
+  request.put('/admin/auth/password', data)
 
 // E1-E2-统计大屏
 export const dashboard = () => request.get('/admin/stats/dashboard')

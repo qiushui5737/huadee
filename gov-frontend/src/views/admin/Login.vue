@@ -9,7 +9,7 @@
         <div class="intro">
           <div class="intro-title">
             <span class="tag">统一身份认证</span>
-            <h1>政务管理端</h1>
+            <h1>{{ isAdminEntry ? '政务管理端' : '政务服务用户端' }}</h1>
           </div>
         </div>
         <div class="login-form">
@@ -18,7 +18,7 @@
           <el-input v-model="form.username" size="large" placeholder="请输入用户名" :prefix-icon="User" />
           <label>密码</label>
           <el-input v-model="form.password" size="large" type="password" show-password placeholder="请输入密码" :prefix-icon="Lock" @keyup.enter="onLogin" />
-          <div class="form-links"><span>还没有账号？<router-link to="/admin/register">立即注册</router-link></span><span>账号密码登录</span></div>
+          <div class="form-links"><span>还没有账号？<router-link :to="isAdminEntry ? '/admin/register' : '/register'">立即注册</router-link></span><span>账号密码登录</span></div>
           <el-button class="primary-btn" type="primary" :loading="loading" @click="onLogin">登 录</el-button>
           <p class="notice">请妥善保管账号信息，请勿向他人泄露密码。</p>
         </div>
@@ -28,21 +28,24 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { adminLogin } from '@/api/admin'
 import { useUserStore } from '@/stores/user'
-const router = useRouter(); const userStore = useUserStore(); const loading = ref(false)
+const router = useRouter(); const route = useRoute(); const userStore = useUserStore(); const loading = ref(false)
+const isAdminEntry = computed(() => route.path.startsWith('/admin'))
 const form = reactive({ username: '', password: '' })
 async function onLogin() {
   if (!form.username.trim() || !form.password) return ElMessage.warning('请输入用户名和密码')
   loading.value = true
   try {
     const res: any = await adminLogin({ username: form.username.trim(), password: form.password })
-    userStore.setToken(res.data.token); userStore.setUser(res.data.realName || res.data.username, res.data.roles || [])
-    ElMessage.success('登录成功'); router.replace('/admin')
+    userStore.setSession(res.data.token, res.data)
+    const admin = (res.data.roles || []).includes('ADMIN')
+    ElMessage.success(admin ? '管理员登录成功' : '用户登录成功')
+    router.replace(admin ? '/admin' : String(route.query.redirect || '/'))
   } finally { loading.value = false }
 }
 </script>
