@@ -19,7 +19,10 @@ const routes: RouteRecordRaw[] = [
       { path: 'chat', name: 'chat', component: () => import('@/views/portal/Chat.vue') },
       { path: 'service', name: 'service', component: () => import('@/views/portal/Service.vue') },
       { path: 'interaction', name: 'interaction', component: () => import('@/views/portal/Interaction.vue') },
+      { path: 'interaction/write', name: 'write-letter', component: () => import('@/views/portal/WriteLetter.vue') },
+      { path: 'interaction/suggest', name: 'submit-suggest', component: () => import('@/views/portal/SubmitSuggest.vue') },
       { path: 'disclosure', name: 'disclosure', component: () => import('@/views/portal/Disclosure.vue') },
+      { path: 'questionnaire', name: 'questionnaire', component: () => import('@/views/portal/Questionnaire.vue') },
       { path: 'dept', name: 'dept', component: () => import('@/views/portal/Dept.vue') }
     ]
   },
@@ -39,6 +42,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'interaction', name: 'admin-interaction', component: () => import('@/views/admin/InteractionMgmt.vue') },
       { path: 'service', name: 'admin-service', component: () => import('@/views/admin/ServiceApproval.vue') },
       { path: 'disclosure', name: 'admin-disclosure', component: () => import('@/views/admin/DisclosureAudit.vue') },
+      { path: 'questionnaire', name: 'admin-questionnaire', component: () => import('@/views/admin/QuestionnaireMgmt.vue') },
       { path: 'cms', name: 'admin-cms', component: () => import('@/views/admin/ContentMgmt.vue') },
       { path: 'performance', name: 'admin-performance', component: () => import('@/views/admin/Performance.vue') },
       { path: 'system', name: 'admin-system', component: () => import('@/views/admin/System.vue') }

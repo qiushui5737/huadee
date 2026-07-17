@@ -22,28 +22,34 @@
 
       <!-- 统计卡片 -->
       <el-row :gutter="16" style="margin-bottom: 20px;">
-        <el-col :span="6">
+        <el-col :span="5">
           <el-card shadow="never" class="stat-card">
             <div class="stat-num warning">{{ stats.pending }}</div>
             <div class="stat-label">待分派</div>
           </el-card>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="5">
           <el-card shadow="never" class="stat-card">
             <div class="stat-num info">{{ stats.dispatched }}</div>
             <div class="stat-label">已分派</div>
           </el-card>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="5">
           <el-card shadow="never" class="stat-card">
             <div class="stat-num success">{{ stats.replied }}</div>
             <div class="stat-label">已回复</div>
           </el-card>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="5">
           <el-card shadow="never" class="stat-card">
             <div class="stat-num">{{ stats.finished }}</div>
             <div class="stat-label">已办结</div>
+          </el-card>
+        </el-col>
+        <el-col :span="4">
+          <el-card shadow="never" class="stat-card" style="border: 2px solid #f56c6c;">
+            <div class="stat-num danger">{{ stats.overdue }}</div>
+            <div class="stat-label">超时提醒</div>
           </el-card>
         </el-col>
       </el-row>
@@ -51,8 +57,12 @@
       <!-- 留言表格 -->
       <el-table :data="messageList" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="content" label="内容摘要" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="title" label="标题" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" width="80">
+          <template #default="{ row }">
+            <el-tag :type="typeTagType(row.type)" size="small">{{ row.type || '咨询' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="userName" label="留言人" width="100" />
         <el-table-column prop="deptCode" label="部门" width="100">
           <template #default="{ row }">
@@ -64,13 +74,25 @@
             <el-tag :type="statusTagType(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="督办" width="70">
+          <template #default="{ row }">
+            <el-tag v-if="row.supervise" type="danger" size="small">已督办</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="deadline" label="处理期限" width="180">
+          <template #default="{ row }">
+            <span :style="{ color: isOverdue(row) ? '#f56c6c' : '' }">{{ row.deadline || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="createTime" label="提交时间" width="180" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
             <el-button v-if="row.status === '待分派'" link type="warning" size="small" @click="showDispatch(row)">分派</el-button>
             <el-button v-if="row.status !== '已办结'" link type="success" size="small" @click="showReply(row)">回复</el-button>
             <el-button v-if="row.status === '已回复'" link type="info" size="small" @click="handleFinish(row)">办结</el-button>
+            <el-button v-if="!row.supervise && row.status !== '已办结'" link type="danger" size="small" @click="handleSupervise(row)">督办</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -153,7 +175,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { messageList as fetchMessageList, replyMessage } from '@/api/interaction'
+import { messageList as fetchMessageList, replyMessage, messageStats, superviseMessage } from '@/api/interaction'
 import request from '@/utils/request'
 
 // 部门编码映射
@@ -162,7 +184,7 @@ const deptNameMap: Record<string, string> = {
 }
 
 // 统计数据
-const stats = reactive({ pending: 0, dispatched: 0, replied: 0, finished: 0 })
+const stats = reactive({ pending: 0, dispatched: 0, replied: 0, finished: 0, overdue: 0 })
 
 // 列表数据
 const messageList = ref<any[]>([])
@@ -194,11 +216,7 @@ const loadMessages = async () => {
     if (res.code === 200) {
       messageList.value = res.data.records
       total.value = res.data.total
-      // 更新统计
-      stats.pending = messageList.value.filter((m: any) => m.status === '待分派').length
-      stats.dispatched = messageList.value.filter((m: any) => m.status === '已分派').length
-      stats.replied = messageList.value.filter((m: any) => m.status === '已回复').length
-      stats.finished = messageList.value.filter((m: any) => m.status === '已办结').length
+      loadStats()
     }
   } catch (e) {
     console.error('加载留言列表失败', e)
@@ -284,6 +302,45 @@ const handleFinish = async (row: any) => {
   }
 }
 
+// 加载统计
+const loadStats = async () => {
+  try {
+    const res: any = await messageStats()
+    if (res.code === 200) {
+      const ss = res.data.statusStats
+      stats.pending = ss['待分派'] || 0
+      stats.dispatched = ss['已分派'] || 0
+      stats.replied = ss['已回复'] || 0
+      stats.finished = ss['已办结'] || 0
+      stats.overdue = res.data.overdueCount || 0
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// 是否超时
+const isOverdue = (row: any) => {
+  if (!row.deadline || row.status === '已办结') return false
+  return new Date(row.deadline) < new Date()
+}
+
+// 督办
+const handleSupervise = async (row: any) => {
+  try {
+    await ElMessageBox.confirm(`确认对「${row.title}」进行督办？`, '督办确认')
+    const res: any = await superviseMessage(row.id, { operator: '系统管理员' })
+    if (res.code === 200) {
+      ElMessage.success('督办成功')
+      loadMessages()
+    }
+  } catch (e) { /* 取消 */ }
+}
+
+// 类型标签
+const typeTagType = (type: string) => {
+  const map: Record<string, string> = { '咨询': '', '投诉': 'danger', '建议': 'success', '求助': 'warning' }
+  return map[type] || ''
+}
+
 // 状态标签颜色
 const statusTagType = (status: string) => {
   const map: Record<string, string> = {
@@ -328,6 +385,7 @@ onMounted(() => {
     &.warning { color: #e6a23c; }
     &.info { color: #909399; }
     &.success { color: #67c23a; }
+    &.danger { color: #f56c6c; }
   }
   .stat-label {
     font-size: 13px;
