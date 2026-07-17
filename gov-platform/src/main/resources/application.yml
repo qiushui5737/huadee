@@ -6,39 +6,12 @@ spring:
     name: gov-platform
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
-    username: root
-    password: 123456
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
-      database: 0
-
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    map-underscore-to-camel-case: true
-  global-config:
-    db-config:
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-=======
-server:
-  port: 8080
-
-spring:
-  application:
-    name: gov-platform
-  datasource:
-    url: "${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}"
-    username: "${DB_USERNAME:root}"
-    password: "${DB_PASSWORD:050420}"
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  data:
-    redis:
-      host: "${REDIS_HOST:localhost}"
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       database: 0
 
@@ -51,13 +24,3 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
-
-ai:
-  # Set true to call a real OpenAI-compatible AI API; false uses local RAG fallback.
-  enabled: ${AI_ENABLED:false}
-  # Example: https://api.openai.com/v1 or your provider/proxy /v1 base URL.
-  base-url: "${AI_BASE_URL:}"
-  # Do not commit a real API key. Set AI_API_KEY in your local environment.
-  api-key: "${AI_API_KEY:}"
-  chat-model: "${AI_CHAT_MODEL:gpt-4o-mini}"
-  timeout-seconds: ${AI_TIMEOUT_SECONDS:120}
