@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // B1-事项目录
 export const categories = () => request.get('/service/catalog/categories')
@@ -9,3 +9,23 @@ export const itemDetail = (id: number) => request.get(`/service/catalog/items/${
 export const formSchema = (itemId: number) => request.get(`/service/form/schema/${itemId}`)
 export const submitForm = (data: any) => request.post('/service/form/submit', data)
 export const formProgress = (acceptNo: string) => request.get(`/service/form/progress/${acceptNo}`)
+export const records = (params?: any) => request.get('/service/form/records', { params })
+export const recordDetail = (acceptNo: string) => request.get(`/service/form/records/${acceptNo}`)
+
+// B4-进度查询 & B5-缴费证照
+export const calculatePayment = (acceptNo: string) => request.get(`/service/payment/calculate/${acceptNo}`)
+export const pay = (data: any) => request.post('/service/payment/pay', data)
+export const getLicense = (acceptNo: string) => request.get(`/service/payment/license/${acceptNo}`)
+export const downloadLicense = (acceptNo: string) => request.get(`/service/payment/download/${acceptNo}`)
+export const paymentRecords = (params?: any) => request.get('/service/payment/records', { params })
+
+// 审批管理
+export const approvalRecords = (params?: any) => request.get('/service/form/records/approval', { params })
+export const approve = (acceptNo: string, data: any) => request.post(`/service/form/approve/${acceptNo}`, data)
+export const batchApprove = (data: any) => request.post('/service/form/batch-approve', data)
+
+// 进度询问
+export const inquiryProgress = (acceptNo: string, content: string) => request.post('/service/form/inquiry', { acceptNo, content })
+export const getInquiries = (acceptNo: string) => request.get(`/service/form/inquiries/${acceptNo}`)
+export const getAllInquiries = () => request.get('/service/form/inquiries')
+export const replyInquiry = (inquiryId: number, reply: string) => request.post(`/service/form/inquiry/${inquiryId}/reply`, { reply })

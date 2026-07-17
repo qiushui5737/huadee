@@ -72,9 +72,14 @@ CREATE TABLE IF NOT EXISTS service_record (
     user_id     BIGINT       COMMENT '申请人ID',
     user_name   VARCHAR(50)  COMMENT '申请人姓名',
     form_data   TEXT         COMMENT '表单数据(JSON)',
-    status      VARCHAR(20)  DEFAULT '受理中' COMMENT '状态',
+    status      VARCHAR(20)  DEFAULT '提交申请' COMMENT '状态',
     submit_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
     finish_time DATETIME     DEFAULT NULL,
+    comment     TEXT         COMMENT '审批意见',
+    pay_status  VARCHAR(20)  DEFAULT '待支付' COMMENT '支付状态',
+    pay_amount  DECIMAL(10,2) COMMENT '缴费金额',
+    pay_time    DATETIME     COMMENT '支付时间',
+    license_status VARCHAR(20) DEFAULT '办理中' COMMENT '证照状态',
     UNIQUE KEY uk_accept (accept_no)
 ) ENGINE=InnoDB COMMENT='办件记录';
 
@@ -160,12 +165,17 @@ CREATE TABLE IF NOT EXISTS sys_user (
     username    VARCHAR(50)  NOT NULL COMMENT '用户名/工号',
     password    VARCHAR(200) NOT NULL COMMENT '密码(BCrypt)',
     real_name   VARCHAR(50)  COMMENT '姓名',
+    gender      VARCHAR(10)  COMMENT '性别',
+    id_card     VARCHAR(18)  COMMENT '身份证号',
     phone       VARCHAR(20)  COMMENT '手机号',
+    email       VARCHAR(100) COMMENT '邮箱',
     dept_code   VARCHAR(50)  COMMENT '所属部门',
+    address     VARCHAR(255) COMMENT '联系地址',
     status      TINYINT      DEFAULT 1 COMMENT '0禁用 1启用',
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
     deleted     TINYINT      DEFAULT 0,
-    UNIQUE KEY uk_username (username)
+    UNIQUE KEY uk_username (username),
+    UNIQUE KEY uk_id_card (id_card)
 ) ENGINE=InnoDB COMMENT='系统用户';
 
 CREATE TABLE IF NOT EXISTS sys_role (
@@ -210,9 +220,9 @@ CREATE TABLE IF NOT EXISTS sys_message (
 -- 初始化数据
 -- =====================================================
 INSERT INTO sys_user (username, password, real_name, dept_code) VALUES
-  ('admin', '$2a$10$placeholder', '系统管理员', 'ADMIN'),
-  ('edu_user', '$2a$10$placeholder', '教育部专员', 'EDU'),
-  ('hea_user', '$2a$10$placeholder', '卫健委专员', 'HEA');
+  ('admin', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '系统管理员', 'ADMIN'),
+  ('edu_user', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '教育部专员', 'EDU'),
+  ('hea_user', '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq', '卫健委专员', 'HEA');
 
 INSERT INTO sys_role (role_code, role_name) VALUES
   ('ADMIN', '系统管理员'),
@@ -229,3 +239,15 @@ INSERT INTO performance_metric (dept_code, metric_code, metric_name, target_valu
 INSERT INTO sensitive_word (word, category, level) VALUES
   ('测试敏感词1', '政治', 3),
   ('测试敏感词2', '其他', 1);
+
+INSERT INTO service_item (item_code, item_name, category, dept_code, description) VALUES
+  ('CAT01-001', '户口迁移', 'CAT01', 'POL', '办理户口迁移手续'),
+  ('CAT01-002', '新生儿入户', 'CAT01', 'POL', '为新生儿办理户口登记'),
+  ('CAT02-001', '社保参保登记', 'CAT02', 'SOC', '办理社会保险参保登记'),
+  ('CAT02-002', '社保卡挂失补办', 'CAT02', 'SOC', '社保卡挂失及补办'),
+  ('CAT03-001', '医保报销', 'CAT03', 'MED', '医疗费用报销申请'),
+  ('CAT03-002', '医保定点医院变更', 'CAT03', 'MED', '变更医保定点医院'),
+  ('CAT04-001', '入学登记', 'CAT04', 'EDU', '义务教育阶段入学登记'),
+  ('CAT04-002', '转学申请', 'CAT04', 'EDU', '办理学生转学手续'),
+  ('CAT05-001', '公租房申请', 'CAT05', 'HOU', '公共租赁住房申请'),
+  ('CAT06-001', '创业补贴申请', 'CAT06', 'EMP', '创业扶持补贴申请');
