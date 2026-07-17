@@ -1,4 +1,5 @@
-﻿<template>
+
+<template>
   <div class="disclosure-audit">
     <el-card shadow="hover">
       <template #header>
@@ -211,10 +212,4 @@ onMounted(() => { loadList(); loadStats() })
 }
 .preview { background: #f5f7fa; padding: 10px; border-radius: 4px; font-size: 13px; color: #666; max-height: 80px; overflow-y: auto; }
 </style>
-<template>
-  <div style="padding:20px;">
-    <h2>依申请审核 - 审核工作台与时限</h2>
-    <el-empty description="页面骨架 - 待实现" />
-  </div>
-</template>
-<script setup lang="ts"></script>
+

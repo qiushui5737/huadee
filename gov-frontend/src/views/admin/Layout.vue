@@ -49,7 +49,7 @@ async function logout() {
   try {
     await adminLogout()
   } finally {
-    userStore.logout()
+    userStore.clearSession('admin')
     router.replace('/admin/login')
   }
 }
