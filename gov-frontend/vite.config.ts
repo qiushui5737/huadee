@@ -1,8 +1,10 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  return {
   plugins: [vue()],
   resolve: {
     alias: {
@@ -13,7 +15,8 @@ export default defineConfig({
     port: 3000,
     proxy: {
       // 所有API统一代理到单体后服务(端口8080)
-      '/api': { target: 'http://localhost:8080', changeOrigin: true }
+      '/api': { target: env.VITE_API_PROXY || 'http://localhost:8080', changeOrigin: true }
     }
+  }
   }
 })

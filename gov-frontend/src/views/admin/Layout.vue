@@ -30,6 +30,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { adminLogout } from '@/api/admin'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,8 +45,12 @@ const pageTitle = computed(() => {
   return map[route.path] || '管理端'
 })
 
-function logout() {
-  userStore.logout()
-  router.push('/admin/login')
+async function logout() {
+  try {
+    await adminLogout()
+  } finally {
+    userStore.logout()
+    router.replace('/admin/login')
+  }
 }
 </script>
