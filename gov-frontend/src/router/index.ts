@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'service', name: 'service', component: () => import('@/views/portal/Service.vue') },
       { path: 'interaction', name: 'interaction', component: () => import('@/views/portal/Interaction.vue') },
       { path: 'disclosure', name: 'disclosure', component: () => import('@/views/portal/Disclosure.vue') },
+      { path: 'disclosure-catalog', name: 'disclosure-catalog', component: () => import('@/views/portal/DisclosureCatalog.vue') },
       { path: 'dept', name: 'dept', component: () => import('@/views/portal/Dept.vue') }
     ]
   },
