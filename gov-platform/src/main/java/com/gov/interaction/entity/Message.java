@@ -18,10 +18,16 @@ public class Message extends BaseEntity {
     private Long userId;
     private String userName;
     private String title;
+    private String type;          // 留言类型: 咨询/投诉/建议/求助
     private String content;
     private String deptCode;
-    private String status;
+    private String status;        // 待分派/已分派/已回复/已办结
+    private Boolean supervise;    // 是否督办
+    private LocalDateTime superviseTime;  // 督办时间
+    private LocalDateTime deadline;       // 处理期限
     private String replyContent;
     private String replyBy;
     private LocalDateTime replyTime;
+    private Integer rating;       // 评价星级 1-5
+    private String ratingContent; // 评价内容
 }
