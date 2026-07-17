@@ -1,3 +1,4 @@
+
 -- Unified schema for gov_platform.
 -- Purpose: create the shared database and all project tables for every team member.
 -- Safe to run repeatedly: uses CREATE DATABASE IF NOT EXISTS and CREATE TABLE IF NOT EXISTS.
@@ -522,4 +523,150 @@ CREATE TABLE IF NOT EXISTS performance_metric (
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_performance_metric (dept_code, metric_code, period)
 ) ENGINE=InnoDB;
+
+-- =====================================================
+-- V003: 民意调查问卷系统 - 新建表
+-- 作者: dev-interaction
+-- 日期: 2026-07-16
+-- =====================================================
+
+-- 问卷主表
+CREATE TABLE IF NOT EXISTS questionnaire (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title       VARCHAR(200) NOT NULL COMMENT '问卷标题',
+    description TEXT         COMMENT '问卷说明',
+    status      VARCHAR(20)  DEFAULT '草稿' COMMENT '状态: 草稿/已发布/已关闭',
+    publish_time DATETIME    DEFAULT NULL COMMENT '发布时间',
+    close_time  DATETIME    DEFAULT NULL COMMENT '关闭时间',
+    total_answers INT       DEFAULT 0 COMMENT '答卷总数',
+    create_by   VARCHAR(50)  COMMENT '创建人',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted     TINYINT      DEFAULT 0
+) ENGINE=InnoDB COMMENT='民意调查问卷';
+
+-- 问卷题目表
+CREATE TABLE IF NOT EXISTS questionnaire_question (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    questionnaire_id BIGINT NOT NULL COMMENT '问卷ID',
+    question_text  TEXT NOT NULL COMMENT '题目内容',
+    question_type  VARCHAR(20) NOT NULL COMMENT '题目类型: single/multiple/text',
+    options        TEXT COMMENT '选项(JSON数组): ["选项A","选项B"]',
+    required       TINYINT DEFAULT 1 COMMENT '是否必答: 0否 1是',
+    sort_order     INT DEFAULT 0 COMMENT '排序',
+    create_time    DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='问卷题目';
+
+-- 答卷表
+CREATE TABLE IF NOT EXISTS questionnaire_answer (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    questionnaire_id BIGINT NOT NULL COMMENT '问卷ID',
+    user_name   VARCHAR(50)  COMMENT '填写人姓名',
+    phone       VARCHAR(20)  COMMENT '联系电话',
+    submit_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间'
+) ENGINE=InnoDB COMMENT='问卷答卷';
+
+-- 答卷详情表
+CREATE TABLE IF NOT EXISTS questionnaire_answer_detail (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    answer_id   BIGINT NOT NULL COMMENT '答卷ID',
+    question_id BIGINT NOT NULL COMMENT '题目ID',
+    answer_text TEXT COMMENT '答案文本(文本题)',
+    answer_options TEXT COMMENT '答案选项(JSON数组): ["选项A","选项C"]',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='答卷详情';
+
+-- =====================================================
+-- Project compatibility: authentication, profile and current entities
+-- Safe for both a fresh database and an existing shared database.
+-- =====================================================
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS add_column_if_missing$$
+CREATE PROCEDURE add_column_if_missing(
+  IN p_table VARCHAR(64),
+  IN p_column VARCHAR(64),
+  IN p_definition TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = p_table
+      AND COLUMN_NAME = p_column
+  ) THEN
+    SET @ddl = CONCAT('ALTER TABLE \`', p_table, '\` ADD COLUMN \`', p_column, '\` ', p_definition);
+    PREPARE stmt FROM @ddl;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+
+DROP PROCEDURE IF EXISTS add_index_if_missing$$
+CREATE PROCEDURE add_index_if_missing(
+  IN p_table VARCHAR(64),
+  IN p_index VARCHAR(64),
+  IN p_definition TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = p_table
+      AND INDEX_NAME = p_index
+  ) THEN
+    SET @ddl = CONCAT('ALTER TABLE \`', p_table, '\` ADD ', p_definition);
+    PREPARE stmt FROM @ddl;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+
+DELIMITER ;
+
+CALL add_column_if_missing('sys_user', 'gender', 'VARCHAR(10) NULL COMMENT ''性别'' AFTER \`real_name\`');
+CALL add_column_if_missing('sys_user', 'id_card', 'VARCHAR(18) NULL COMMENT ''身份证号'' AFTER \`gender\`');
+CALL add_column_if_missing('sys_user', 'address', 'VARCHAR(255) NULL COMMENT ''联系地址'' AFTER \`dept_code\`');
+CALL add_index_if_missing('sys_user', 'uk_id_card', 'UNIQUE KEY \`uk_id_card\` (\`id_card\`)');
+
+CALL add_column_if_missing('message', 'supervise', 'TINYINT DEFAULT 0 COMMENT ''是否督办'' AFTER \`status\`');
+CALL add_column_if_missing('message', 'supervise_time', 'DATETIME NULL COMMENT ''督办时间'' AFTER \`supervise\`');
+CALL add_column_if_missing('message', 'deadline', 'DATETIME NULL COMMENT ''处理期限'' AFTER \`supervise_time\`');
+CALL add_column_if_missing('message', 'rating', 'TINYINT NULL COMMENT ''评价星级1-5'' AFTER \`reply_time\`');
+CALL add_column_if_missing('message', 'rating_content', 'TEXT NULL COMMENT ''评价内容'' AFTER \`rating\`');
+CALL add_column_if_missing('message', 'create_by', 'BIGINT DEFAULT 0 COMMENT ''创建人''');
+CALL add_column_if_missing('message', 'update_by', 'BIGINT DEFAULT 0 COMMENT ''更新人''');
+
+CALL add_column_if_missing('disclosure_apply', 'acquire_method', 'VARCHAR(50) NULL COMMENT ''获取方式'' AFTER \`purpose\`');
+CALL add_column_if_missing('disclosure_apply', 'update_time', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间''');
+CALL add_column_if_missing('disclosure_apply', 'create_by', 'BIGINT DEFAULT 0 COMMENT ''创建人''');
+CALL add_column_if_missing('disclosure_apply', 'update_by', 'BIGINT DEFAULT 0 COMMENT ''更新人''');
+CALL add_column_if_missing('disclosure_apply', 'deleted', 'TINYINT DEFAULT 0 COMMENT ''逻辑删除''');
+
+DROP PROCEDURE IF EXISTS add_index_if_missing;
+DROP PROCEDURE IF EXISTS add_column_if_missing;
+
+-- Required role data. Existing role IDs and descriptions are preserved.
+INSERT INTO sys_role (role_code, role_name, description)
+VALUES
+  ('ADMIN', '系统管理员', '平台全局管理员'),
+  ('DEPT_ADMIN', '部门管理员', '部门业务管理员'),
+  ('OPERATOR', '普通用户', '门户注册用户')
+ON DUPLICATE KEY UPDATE
+  role_name = VALUES(role_name);
+
+-- Initial administrator is inserted only when it does not already exist.
+-- Default password: Admin@123
+INSERT INTO sys_user (username, password, real_name, dept_code, status, deleted)
+SELECT 'admin',
+       '$2b$10$BjPh4TqxXwz4bHenk/t8x.qqyyZQ7ILlsQZwlq04itIU3hlzdr2jq',
+       '系统管理员', 'ADMIN', 1, 0
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE username = 'admin');
+
+INSERT IGNORE INTO sys_user_role (user_id, role_id)
+SELECT u.id, r.id
+FROM sys_user u
+JOIN sys_role r ON r.role_code = 'ADMIN'
+WHERE u.username = 'admin';
 
