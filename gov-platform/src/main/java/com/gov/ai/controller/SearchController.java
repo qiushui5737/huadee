@@ -1,26 +1,41 @@
 package com.gov.ai.controller;
 
-import com.gov.common.result.Result;
+import com.gov.ai.service.AiService;
 import com.gov.common.result.PageResult;
-import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import com.gov.common.result.Result;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * A1-智能搜索: ES全文检索
- */
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/ai/search")
 public class SearchController {
+    private final AiService aiService;
+
+    public SearchController(AiService aiService) {
+        this.aiService = aiService;
+    }
 
     @GetMapping
-    public Result<PageResult<Map<String,Object>>> search(@RequestParam String keyword,
-            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        // TODO: 接入Elasticsearch全文检索
-        return Result.success(PageResult.of(Collections.emptyList(), 0, page, size));
+    public Result<PageResult<Map<String, Object>>> search(@RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(aiService.search(keyword, page, size));
+    }
+
+    @GetMapping("/semantic")
+    public Result<PageResult<Map<String, Object>>> semanticSearch(@RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(aiService.semanticSearch(keyword, page, size));
     }
 
     @GetMapping("/hot")
     public Result<List<String>> hotKeywords() {
-        return Result.success(List.of("养老金调整","医保报销","居住证办理","入学政策"));
+        return Result.success(aiService.hotKeywords());
     }
 }

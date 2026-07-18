@@ -8,6 +8,7 @@ target/
 # === Node.js / Vue ===
 node_modules/
 dist/
+.npm-cache/
 *.local
 dev-server*.log
 stderr.log
