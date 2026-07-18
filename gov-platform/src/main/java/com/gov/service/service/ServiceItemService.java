@@ -27,6 +27,15 @@ public class ServiceItemService {
         return serviceItemMapper.selectList(wrapper);
     }
 
+    public List<ServiceItem> listByDeptCode(String deptCode) {
+        QueryWrapper<ServiceItem> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", 1);
+        if (deptCode != null && !deptCode.isEmpty()) {
+            wrapper.eq("dept_code", deptCode);
+        }
+        return serviceItemMapper.selectList(wrapper);
+    }
+
     public ServiceItem getById(Long id) {
         return serviceItemMapper.selectById(id);
     }

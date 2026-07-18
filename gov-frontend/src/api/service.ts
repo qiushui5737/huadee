@@ -5,6 +5,12 @@ export const categories = () => request.get('/service/catalog/categories')
 export const items = (params: any) => request.get('/service/catalog/items', { params })
 export const itemDetail = (id: number) => request.get(`/service/catalog/items/${id}`)
 
+// 管理端服务管理
+export const myItems = () => request.get('/service/catalog/my-items')
+export const createItem = (data: any) => request.post('/service/catalog/items', data)
+export const updateItem = (id: number, data: any) => request.put(`/service/catalog/items/${id}`, data)
+export const deleteItem = (id: number) => request.delete(`/service/catalog/items/${id}`)
+
 // B2-动态表单 & B3-审批流程
 export const formSchema = (itemId: number) => request.get(`/service/form/schema/${itemId}`)
 export const submitForm = (data: any) => request.post('/service/form/submit', data)

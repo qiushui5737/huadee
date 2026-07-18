@@ -133,7 +133,7 @@ public class FormController {
             return Result.error("表单数据序列化失败");
         }
 
-        ServiceRecord record = serviceRecordService.createRecord(itemId, formDataJson, userName);
+        ServiceRecord record = serviceRecordService.createRecord(itemId, userName, formDataJson);
 
         Map<String,Object> result = new HashMap<>();
         result.put("acceptNo", record.getAcceptNo());

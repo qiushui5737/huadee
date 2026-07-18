@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="service-page">
     <div class="page-banner">
       <div class="banner-content">
@@ -306,12 +306,14 @@ const inquiryForm = reactive({ content: '' })
 const inquiriesList = ref<any[]>([])
 
 const categoryMap: Record<string, string> = {
-  'CAT01': '户籍办理',
-  'CAT02': '社保服务',
-  'CAT03': '医保服务',
-  'CAT04': '教育服务',
-  'CAT05': '住房服务',
-  'CAT06': '就业服务'
+  'education': '教育服务',
+  'housing': '住房保障',
+  'health': '医疗卫生',
+  'employment': '就业创业',
+  'social': '社会保障',
+  'traffic': '交通出行',
+  'tax': '税费办理',
+  'certificate': '证件办理'
 }
 
 const deptMap: Record<string, string> = {
@@ -320,7 +322,9 @@ const deptMap: Record<string, string> = {
   'MED': '医保局',
   'EDU': '教育局',
   'HOU': '住建局',
-  'EMP': '人社局'
+  'EMP': '人社局',
+  'TRA': '交通局',
+  'TAX': '税务局'
 }
 
 const getCategoryName = (code: string) => categoryMap[code] || code

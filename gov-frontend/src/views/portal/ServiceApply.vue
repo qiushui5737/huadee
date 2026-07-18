@@ -81,7 +81,7 @@
         <el-card shadow="hover" class="preview-card">
           <template #header>
             <div class="card-header">
-              <el-icon><Eye /></el-icon>
+              <el-icon><View /></el-icon>
               <span>表单预览</span>
             </div>
           </template>
@@ -139,7 +139,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { EditPen, Upload, ArrowLeft, Check, Eye, InfoFilled, List } from '@element-plus/icons-vue'
+import { EditPen, Upload, ArrowLeft, Check, View, InfoFilled, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { submitForm } from '@/api/service'
 

@@ -58,6 +58,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'stats', name: 'admin-stats', component: () => import('@/views/admin/Stats.vue') },
       { path: 'interaction', name: 'admin-interaction', component: () => import('@/views/admin/InteractionMgmt.vue') },
       { path: 'service', name: 'admin-service', component: () => import('@/views/admin/ServiceApproval.vue') },
+      { path: 'service-mgmt', name: 'admin-service-mgmt', component: () => import('@/views/admin/ServiceMgmt.vue') },
       { path: 'disclosure', name: 'admin-disclosure', component: () => import('@/views/admin/DisclosureAudit.vue') },
       { path: 'questionnaire', name: 'admin-questionnaire', component: () => import('@/views/admin/QuestionnaireMgmt.vue') },
       { path: 'cms', name: 'admin-cms', component: () => import('@/views/admin/ContentMgmt.vue') },

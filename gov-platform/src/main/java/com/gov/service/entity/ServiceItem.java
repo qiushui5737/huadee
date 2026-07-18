@@ -1,14 +1,16 @@
 package com.gov.service.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.gov.common.entity.BaseEntity;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @TableName("service_item")
-public class ServiceItem extends BaseEntity {
+public class ServiceItem {
+
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     @TableField("item_code")
     private String itemCode;
@@ -27,4 +29,10 @@ public class ServiceItem extends BaseEntity {
     private String formSchema;
 
     private Integer status;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
+
+    @TableLogic
+    private Integer deleted;
 }

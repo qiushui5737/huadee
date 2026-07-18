@@ -262,12 +262,14 @@ const stats = reactive({
 const pendingInquiries = computed(() => inquiries.value.filter(i => !i.reply).length)
 
 const categoryMap: Record<string, string> = {
-  'CAT01': '户籍办理',
-  'CAT02': '社保服务',
-  'CAT03': '医保服务',
-  'CAT04': '教育服务',
-  'CAT05': '住房服务',
-  'CAT06': '就业服务'
+  'education': '教育服务',
+  'housing': '住房保障',
+  'health': '医疗卫生',
+  'employment': '就业创业',
+  'social': '社会保障',
+  'traffic': '交通出行',
+  'tax': '税费办理',
+  'certificate': '证件办理'
 }
 
 const getCategoryName = (code: string) => categoryMap[code] || code

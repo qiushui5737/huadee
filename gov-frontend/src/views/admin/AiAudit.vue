@@ -20,7 +20,7 @@
         </div>
         <div class="stat-card warning">
           <div class="stat-icon">
-            <el-icon><AlertTriangle /></el-icon>
+            <el-icon><Warning /></el-icon>
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ stats.sensitive }}</span>
@@ -101,7 +101,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { Search, AlertTriangle, CheckCircle, CloseCircle } from '@element-plus/icons-vue'
+import { Search, Warning, CheckCircle, CloseCircle } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const statusFilter = ref('')
