@@ -9,5 +9,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(interceptor).addPathPatterns("/api/v1/admin/**")
                 .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register");
+        registry.addInterceptor(interceptor).addPathPatterns(
+                "/api/v1/ai/admin/**",
+                "/api/v1/ai/chat/audit",
+                "/api/v1/ai/sensitive/words",
+                "/api/v1/ai/chat/history/**",
+                "/api/v1/ai/chat/conversations/**"
+        );
     }
 }

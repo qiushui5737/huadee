@@ -16,7 +16,8 @@ const request = axios.create({
 request.interceptors.request.use(
   (config) => {
     // 判断当前是C端还是B端
-    const isAdmin = window.location.pathname.startsWith('/admin')
+    const audience = String(config.headers['X-Token-Audience'] || '')
+    const isAdmin = audience ? audience === 'admin' : window.location.pathname.startsWith('/admin')
     const token = localStorage.getItem(isAdmin ? 'admin_token' : 'c_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`

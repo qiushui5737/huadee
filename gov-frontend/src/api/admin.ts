@@ -8,7 +8,8 @@ export interface RegisterData {
   gender: string; idCard: string; phone: string; email: string; deptCode: string; address: string
 }
 export const adminRegister = (data: RegisterData) => request.post('/admin/auth/register', data)
-export const adminInfo = () => request.get('/admin/auth/info')
+export const adminInfo = (audience: 'admin' | 'portal' = 'portal') =>
+  request.get('/admin/auth/info', { headers: { 'X-Token-Audience': audience } })
 export const adminLogout = () => request.post('/admin/auth/logout')
 export const updateProfile = (data: { realName: string; gender: string; phone: string; email: string; address: string }) =>
   request.put('/admin/auth/profile', data)

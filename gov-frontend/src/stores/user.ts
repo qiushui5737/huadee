@@ -38,7 +38,7 @@ export const useUserStore = defineStore('user', () => {
     if (!savedToken) throw new Error('未登录')
     token.value = savedToken
     const { adminInfo } = await import('@/api/admin')
-    const res: any = await adminInfo()
+    const res: any = await adminInfo(audience)
     profile.value = res.data
     if (audience === 'admin' && !isAdmin.value) throw new Error('无管理权限')
   }

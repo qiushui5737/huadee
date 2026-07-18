@@ -14,6 +14,10 @@ spring:
       host: "${REDIS_HOST:localhost}"
       port: ${REDIS_PORT:6379}
       database: 0
+  elasticsearch:
+    uris: "${ELASTICSEARCH_URIS:http://127.0.0.1:9200}"
+    connection-timeout: 3s
+    socket-timeout: 10s
 
 mybatis-plus:
   configuration:
@@ -33,4 +37,17 @@ ai:
   # Do not commit a real API key. Set AI_API_KEY in your local environment.
   api-key: "${AI_API_KEY:}"
   chat-model: "${AI_CHAT_MODEL:gpt-4o-mini}"
+  # Disable deep reasoning by default to reduce time to first token for routine government Q&A.
+  thinking-enabled: ${AI_THINKING_ENABLED:false}
   timeout-seconds: ${AI_TIMEOUT_SECONDS:120}
+  search:
+    elasticsearch-enabled: ${AI_ELASTICSEARCH_ENABLED:true}
+    index-name: ${AI_SEARCH_INDEX:gov_content_v1}
+  embedding:
+    # Configure a dedicated OpenAI-compatible embedding endpoint to enable neural semantic search.
+    enabled: ${AI_EMBEDDING_ENABLED:false}
+    base-url: "${AI_EMBEDDING_BASE_URL:}"
+    api-key: "${AI_EMBEDDING_API_KEY:}"
+    model: "${AI_EMBEDDING_MODEL:text-embedding-3-small}"
+    dimensions: ${AI_EMBEDDING_DIMENSIONS:384}
+    min-score: ${AI_EMBEDDING_MIN_SCORE:0.15}

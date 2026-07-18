@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.gov.common.exception.BusinessException;
+import com.gov.ai.service.SensitiveWordService;
 import com.gov.interaction.entity.Message;
 import com.gov.interaction.mapper.MessageMapper;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,11 @@ import java.util.List;
  */
 @Service
 public class MessageService extends ServiceImpl<MessageMapper, Message> {
+    private final SensitiveWordService sensitiveWordService;
+
+    public MessageService(SensitiveWordService sensitiveWordService) {
+        this.sensitiveWordService = sensitiveWordService;
+    }
 
     /**
      * 提交留言
@@ -30,10 +36,17 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
         if (!StringUtils.hasText(message.getContent())) {
             throw BusinessException.of("留言内容不能为空");
         }
+        java.util.Map<String, Object> sensitive = sensitiveWordService.check(message.getTitle() + "\n" + message.getContent());
+        if (!Boolean.TRUE.equals(sensitive.get("allowed"))) {
+            throw BusinessException.of("留言包含禁止发布的敏感内容，请修改后重试");
+        }
+        message.setTitle(sensitiveWordService.filter(message.getTitle()));
+        message.setContent(sensitiveWordService.filter(message.getContent()));
         if (!StringUtils.hasText(message.getType())) {
             message.setType("咨询");
         }
         message.setStatus("待分派");
+        if ("review".equals(sensitive.get("action"))) message.setStatus("待复核");
         // 默认处理期限：7天
         message.setDeadline(LocalDateTime.now().plusDays(7));
         save(message);
@@ -92,7 +105,8 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
         if (!StringUtils.hasText(content)) {
             throw BusinessException.of("回复内容不能为空");
         }
-        message.setReplyContent(content);
+        sensitiveWordService.assertNotBlocked(content);
+        message.setReplyContent(sensitiveWordService.filter(content));
         message.setReplyBy(operator);
         message.setReplyTime(LocalDateTime.now());
         message.setStatus("已回复");
@@ -149,7 +163,10 @@ public class MessageService extends ServiceImpl<MessageMapper, Message> {
             throw BusinessException.of("评价星级必须为1-5");
         }
         message.setRating(rating);
-        message.setRatingContent(content);
+        if (StringUtils.hasText(content)) {
+            sensitiveWordService.assertNotBlocked(content);
+            message.setRatingContent(sensitiveWordService.filter(content));
+        }
         updateById(message);
     }
 

@@ -133,6 +133,20 @@ CREATE TABLE IF NOT EXISTS search_index_task (
   KEY idx_search_index_task_status (status)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS search_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  keyword VARCHAR(200) NOT NULL,
+  search_mode VARCHAR(20) NOT NULL DEFAULT 'keyword',
+  result_count INT NOT NULL DEFAULT 0,
+  engine VARCHAR(30) NOT NULL DEFAULT 'elasticsearch',
+  elapsed_ms BIGINT NOT NULL DEFAULT 0,
+  user_id BIGINT,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_search_log_keyword (keyword),
+  KEY idx_search_log_time (create_time),
+  KEY idx_search_log_user (user_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS vector_embedding (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   biz_type VARCHAR(50) NOT NULL,
@@ -643,6 +657,20 @@ CALL add_column_if_missing('disclosure_apply', 'update_time', 'DATETIME DEFAULT 
 CALL add_column_if_missing('disclosure_apply', 'create_by', 'BIGINT DEFAULT 0 COMMENT ''创建人''');
 CALL add_column_if_missing('disclosure_apply', 'update_by', 'BIGINT DEFAULT 0 COMMENT ''更新人''');
 CALL add_column_if_missing('disclosure_apply', 'deleted', 'TINYINT DEFAULT 0 COMMENT ''逻辑删除''');
+
+CALL add_column_if_missing('ai_conversation', 'update_time', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间''');
+CALL add_column_if_missing('ai_conversation', 'deleted', 'TINYINT DEFAULT 0 COMMENT ''逻辑删除''');
+CALL add_index_if_missing('ai_conversation', 'uk_ai_conversation_session', 'UNIQUE KEY `uk_ai_conversation_session` (`session_id`)');
+
+CALL add_column_if_missing('chat_session', 'risk_level', 'TINYINT DEFAULT 0 COMMENT ''最高敏感等级''');
+CALL add_column_if_missing('chat_session', 'review_status', 'VARCHAR(20) DEFAULT ''pending'' COMMENT ''审核状态''');
+CALL add_column_if_missing('chat_session', 'review_by', 'BIGINT NULL COMMENT ''审核人''');
+CALL add_column_if_missing('chat_session', 'review_comment', 'VARCHAR(500) NULL COMMENT ''审核意见''');
+CALL add_column_if_missing('chat_session', 'review_time', 'DATETIME NULL COMMENT ''审核时间''');
+CALL add_column_if_missing('chat_session', 'response_ms', 'INT DEFAULT 0 COMMENT ''回答耗时毫秒''');
+CALL add_column_if_missing('chat_session', 'prompt_tokens', 'INT DEFAULT 0 COMMENT ''输入Token数''');
+CALL add_column_if_missing('chat_session', 'completion_tokens', 'INT DEFAULT 0 COMMENT ''输出Token数''');
+CALL add_index_if_missing('chat_session', 'idx_chat_session_review', 'KEY `idx_chat_session_review` (`review_status`,`create_time`)');
 
 DROP PROCEDURE IF EXISTS add_index_if_missing;
 DROP PROCEDURE IF EXISTS add_column_if_missing;

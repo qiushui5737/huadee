@@ -19,8 +19,9 @@
           </el-button>
         </div>
         <div class="hot-row">
+          <span v-if="recentWords.length" class="recent-label">最近搜索</span>
           <el-tag
-            v-for="word in hotWords"
+            v-for="word in recentWords"
             :key="word"
             effect="plain"
             @click="pickWord(word)"
@@ -73,7 +74,7 @@
               </div>
             </div>
             <div class="score-box">
-              <strong>{{ Math.round(item.score || 0) }}</strong>
+              <strong>{{ displayScore(item) }}</strong>
               <span>相关度</span>
               <el-button link type="primary" @click="go(item.url)">查看</el-button>
             </div>
@@ -97,12 +98,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Collection, Link as LinkIcon, Refresh, Search as SearchIcon } from '@element-plus/icons-vue'
-import { hotKeywords, search, semanticSearch } from '@/api/ai'
+import { search, semanticSearch } from '@/api/ai'
 
 const route = useRoute()
 const router = useRouter()
 const keyword = ref(String(route.query.q || ''))
-const hotWords = ref<string[]>([])
+const RECENT_SEARCH_KEY = 'gov_recent_searches'
+const recentWords = ref<string[]>([])
 const records = ref<any[]>([])
 const loading = ref(false)
 const total = ref(0)
@@ -122,13 +124,9 @@ watch(() => route.query.q, (value) => {
   runSearch(1)
 })
 
-onMounted(async () => {
-  const res: any = await hotKeywords()
-  hotWords.value = res.data || []
+onMounted(() => {
+  recentWords.value = loadRecentWords()
   if (keyword.value) {
-    runSearch(1)
-  } else {
-    keyword.value = hotWords.value[0] || ''
     runSearch(1)
   }
 })
@@ -142,6 +140,7 @@ async function runSearch(nextPage = 1) {
     const res: any = await api(keyword.value.trim(), page.value, size)
     records.value = res.data?.records || []
     total.value = res.data?.total || 0
+    rememberSearch(keyword.value)
   } finally {
     loading.value = false
   }
@@ -149,8 +148,27 @@ async function runSearch(nextPage = 1) {
 
 function pickWord(word: string) {
   keyword.value = word
-  router.replace({ path: '/search', query: { q: word } })
-  runSearch(1)
+  if (String(route.query.q || '') === word) {
+    runSearch(1)
+  } else {
+    router.replace({ path: '/search', query: { q: word } })
+  }
+}
+
+function loadRecentWords(): string[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY) || '[]')
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string').slice(0, 8) : []
+  } catch {
+    return []
+  }
+}
+
+function rememberSearch(value: string) {
+  const word = value.trim()
+  if (!word) return
+  recentWords.value = [word, ...recentWords.value.filter((item) => item !== word)].slice(0, 8)
+  localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(recentWords.value))
 }
 
 function go(url: string) {
@@ -162,6 +180,11 @@ function tagType(type: string) {
   if (type === '信息公开') return 'warning'
   return 'primary'
 }
+
+function displayScore(item: any) {
+  const score = Number(item.score || 0)
+  return item.matchMode === 'semantic' && score <= 1 ? Math.round(score * 100) : Math.round(score)
+}
 </script>
 
 <style scoped>
@@ -172,6 +195,7 @@ function tagType(type: string) {
 h1 { margin: 0 0 22px; font-size: 34px; font-weight: 700; letter-spacing: 0; }
 .search-box { display: grid; grid-template-columns: minmax(0, 1fr) 108px; gap: 12px; max-width: 820px; }
 .hot-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.recent-label { display: inline-flex; align-items: center; font-size: 13px; color: rgba(255,255,255,.88); }
 .hot-row .el-tag { cursor: pointer; background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.28); }
 .content-shell { max-width: 1120px; margin: 0 auto; padding: 22px 20px 34px; display: grid; grid-template-columns: 238px minmax(0,1fr); gap: 18px; }
 .filter-panel, .result-panel { background: #fff; border: 1px solid #e6eaf0; border-radius: 8px; }
@@ -191,7 +215,7 @@ h1 { margin: 0 0 22px; font-size: 34px; font-weight: 700; letter-spacing: 0; }
 .item-title-row { display: flex; gap: 10px; align-items: center; }
 .item-title-row h3 { margin: 0; font-size: 17px; color: #172033; }
 .summary { margin: 10px 0; color: #4b5563; line-height: 1.7; }
-.summary :deep(mark) { background: #fff1a8; padding: 0 2px; }
+.summary :deep(mark) { background: #fff1a8; padding: 0; }
 .meta-row { display: flex; flex-wrap: wrap; gap: 16px; color: #667085; font-size: 13px; }
 .meta-row span { display: inline-flex; align-items: center; gap: 5px; }
 .score-box { border-left: 1px solid #edf0f5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }

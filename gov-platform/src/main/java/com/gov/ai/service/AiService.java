@@ -3,6 +3,7 @@ package com.gov.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.common.result.PageResult;
+import com.gov.common.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -34,6 +36,8 @@ public class AiService {
     private final DataSource dataSource;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
+    private final ElasticsearchSearchService elasticsearchSearchService;
+    private final SensitiveWordService sensitiveWordService;
 
     @Value("${ai.enabled:false}")
     private boolean aiEnabled;
@@ -50,9 +54,19 @@ public class AiService {
     @Value("${ai.timeout-seconds:30}")
     private int aiTimeoutSeconds;
 
-    public AiService(DataSource dataSource, ObjectMapper objectMapper) {
+    @Value("${ai.thinking-enabled:false}")
+    private boolean aiThinkingEnabled;
+
+    @Value("${ai.embedding.min-score:0.15}")
+    private double semanticMinScore;
+
+    public AiService(DataSource dataSource, ObjectMapper objectMapper,
+            ElasticsearchSearchService elasticsearchSearchService,
+            SensitiveWordService sensitiveWordService) {
         this.dataSource = dataSource;
         this.objectMapper = objectMapper;
+        this.elasticsearchSearchService = elasticsearchSearchService;
+        this.sensitiveWordService = sensitiveWordService;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
@@ -60,70 +74,76 @@ public class AiService {
 
     public PageResult<Map<String, Object>> search(String keyword, int page, int size) {
         String term = clean(keyword);
+        if (term.isBlank()) throw BusinessException.of(400, "搜索关键词不能为空");
+        long started = System.currentTimeMillis();
+        if (elasticsearchSearchService.isAvailable()) {
+            try {
+                PageResult<Map<String, Object>> result = elasticsearchSearchService.search(term, page, size);
+                elasticsearchSearchService.saveSearchLog(term, "keyword", result.getTotal(), "elasticsearch", System.currentTimeMillis() - started);
+                return result;
+            } catch (Exception ignored) {
+                // Fall through to the database search so the public service stays available.
+            }
+        }
         List<Map<String, Object>> all = new ArrayList<>();
         all.addAll(searchKnowledge(term));
         all.addAll(searchCms(term));
         all.addAll(searchServices(term));
         all.sort(Comparator.comparingDouble(item -> -toDouble(item.get("score"))));
-        return page(all, page, size);
+        PageResult<Map<String, Object>> result = page(all, page, size);
+        elasticsearchSearchService.saveSearchLog(term, "keyword", result.getTotal(), "mysql-fallback", System.currentTimeMillis() - started);
+        return result;
     }
 
     public PageResult<Map<String, Object>> semanticSearch(String keyword, int page, int size) {
         String term = clean(keyword);
-        List<Map<String, Object>> all = new ArrayList<>();
-        all.addAll(searchKnowledge(term));
-        all.addAll(searchCms(term));
-        all.addAll(searchServices(term));
-        for (Map<String, Object> item : all) {
-            item.put("matchMode", "semantic");
-            item.put("score", Math.min(99.0, toDouble(item.get("score")) + semanticBonus(term, item)));
+        if (term.isBlank()) throw BusinessException.of(400, "语义搜索内容不能为空");
+        long started = System.currentTimeMillis();
+        if (elasticsearchSearchService.isAvailable()) {
+            try {
+                PageResult<Map<String, Object>> result = elasticsearchSearchService.semanticSearch(
+                        term, page, size, semanticMinScore);
+                String engine = result.getRecords().isEmpty() ? "vector" : String.valueOf(result.getRecords().get(0).get("engine"));
+                elasticsearchSearchService.saveSearchLog(term, "semantic", result.getTotal(), engine,
+                        System.currentTimeMillis() - started);
+                return result;
+            } catch (Exception ignored) {
+                // Keep the public endpoint available if the vector index is being rebuilt.
+            }
         }
-        all.sort(Comparator.comparingDouble(item -> -toDouble(item.get("score"))));
-        return page(all, page, size);
+        PageResult<Map<String, Object>> fallback = search(term, page, size);
+        fallback.getRecords().forEach(item -> {
+            item.put("matchMode", "keyword-fallback");
+            item.put("engine", "keyword-fallback");
+        });
+        return fallback;
     }
 
     public List<String> hotKeywords() {
-        return List.of("学生资助", "健康证明", "政府信息公开", "社保参保证明", "办事进度");
+        List<String> words = elasticsearchSearchService.hotKeywords();
+        return words.isEmpty()
+                ? List.of("学生资助", "健康证明", "政府信息公开", "社保参保证明", "办事进度")
+                : words;
     }
 
     public Map<String, Object> checkSensitive(String text) {
-        String source = text == null ? "" : text;
-        List<Map<String, Object>> words = sensitiveWords();
-        List<Map<String, Object>> hits = new ArrayList<>();
-        String filtered = source;
-
-        for (Map<String, Object> wordInfo : words) {
-            String word = String.valueOf(wordInfo.get("word"));
-            if (!word.isBlank() && source.toLowerCase(Locale.ROOT).contains(word.toLowerCase(Locale.ROOT))) {
-                hits.add(wordInfo);
-                filtered = filtered.replaceAll("(?i)" + java.util.regex.Pattern.quote(word), "*".repeat(word.length()));
-            }
-        }
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("passed", hits.isEmpty());
-        result.put("filtered", filtered);
-        result.put("hits", hits);
-        result.put("hitCount", hits.size());
-        result.put("algorithm", "DFA-local");
-        return result;
+        return sensitiveWordService.check(text);
     }
 
     public List<Map<String, Object>> sensitiveWords() {
-        String sql = "select id, word, category, level, status from sensitive_word where deleted = 0 and status = 1 order by level desc, id desc";
-        return query(sql, ps -> {}, rs -> {
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("id", rs.getLong("id"));
-            row.put("word", rs.getString("word"));
-            row.put("category", rs.getString("category"));
-            row.put("level", rs.getInt("level"));
-            row.put("status", rs.getInt("status"));
-            return row;
-        });
+        return sensitiveWordService.words();
     }
 
     public Map<String, Object> answer(String question, String sessionId) {
+        return answer(question, sessionId, null);
+    }
+
+    public Map<String, Object> answer(String question, String sessionId, Long userId) {
+        validateQuestion(question);
+        long started = System.currentTimeMillis();
         String safeSession = sessionId == null || sessionId.isBlank() ? UUID.randomUUID().toString().replace("-", "") : sessionId;
+        ensureConversation(safeSession, userId, question);
+        List<Map<String, String>> context = loadRecentContext(safeSession, userId, 6);
         Map<String, Object> sensitive = checkSensitive(question);
         List<Map<String, Object>> refs = semanticSearch(question, 1, 4).getRecords();
         boolean passed = Boolean.TRUE.equals(sensitive.get("passed"));
@@ -132,14 +152,16 @@ public class AiService {
 
         if (passed && realAiConfigured()) {
             try {
-                answer = callOpenAiCompatibleChat(question, refs);
+                answer = callOpenAiCompatibleChat(question, refs, context);
                 modelName = aiChatModel;
             } catch (Exception e) {
                 answer = answer + "\n\n提示：真实 AI 接口调用失败，已自动使用本地知识库回答。失败原因：" + e.getMessage();
             }
         }
 
-        saveChat(safeSession, question, answer, refs, modelName, passed ? "normal" : "sensitive");
+        saveChat(safeSession, userId, question, answer, refs, modelName, passed ? "normal" : "sensitive",
+                ((Number) sensitive.get("maxLevel")).intValue(), System.currentTimeMillis() - started);
+        touchConversation(safeSession);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("sessionId", safeSession);
@@ -153,9 +175,14 @@ public class AiService {
     }
 
     public Map<String, Object> streamAnswer(String question, String sessionId,
+            Long userId,
             Consumer<Map<String, Object>> metaConsumer,
             Consumer<String> chunkConsumer) {
+        validateQuestion(question);
+        long started = System.currentTimeMillis();
         String safeSession = sessionId == null || sessionId.isBlank() ? UUID.randomUUID().toString().replace("-", "") : sessionId;
+        ensureConversation(safeSession, userId, question);
+        List<Map<String, String>> context = loadRecentContext(safeSession, userId, 6);
         Map<String, Object> sensitive = checkSensitive(question);
         List<Map<String, Object>> refs = semanticSearch(question, 1, 4).getRecords();
         boolean passed = Boolean.TRUE.equals(sensitive.get("passed"));
@@ -175,7 +202,7 @@ public class AiService {
             emitFallbackChunks(answer, chunkConsumer);
         } else if (realAiConfigured()) {
             try {
-                answer = callOpenAiCompatibleChatStream(question, refs, chunkConsumer);
+                answer = callOpenAiCompatibleChatStream(question, refs, context, chunkConsumer);
                 modelName = aiChatModel;
             } catch (Exception e) {
                 String fallback = buildAnswer(question, refs)
@@ -188,7 +215,9 @@ public class AiService {
             emitFallbackChunks(answer, chunkConsumer);
         }
 
-        saveChat(safeSession, question, answer, refs, modelName, passed ? "normal" : "sensitive");
+        saveChat(safeSession, userId, question, answer, refs, modelName, passed ? "normal" : "sensitive",
+                ((Number) sensitive.get("maxLevel")).intValue(), System.currentTimeMillis() - started);
+        touchConversation(safeSession);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("sessionId", safeSession);
@@ -201,9 +230,15 @@ public class AiService {
         return data;
     }
 
-    public List<Map<String, Object>> history(String sessionId) {
-        String sql = "select id, session_id, question, answer, sources, audit_status, create_time from chat_session where session_id = ? order by id asc limit 50";
-        return query(sql, ps -> ps.setString(1, sessionId), rs -> {
+    public List<Map<String, Object>> history(String sessionId, Long userId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw BusinessException.of(400, "会话ID不能为空");
+        }
+        String sql = "select id, session_id, question, answer, sources, audit_status, create_time from chat_session where session_id = ? and user_id = ? order by id asc limit 50";
+        return query(sql, ps -> {
+            ps.setString(1, sessionId);
+            ps.setLong(2, userId);
+        }, rs -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", rs.getLong("id"));
             row.put("sessionId", rs.getString("session_id"));
@@ -216,21 +251,74 @@ public class AiService {
         });
     }
 
+    public List<Map<String, Object>> conversations(Long userId) {
+        String sql = "select session_id,title,memory_summary,last_message_time,create_time "
+                + "from ai_conversation where user_id=? and deleted=0 "
+                + "order by coalesce(last_message_time,create_time) desc limit 100";
+        return query(sql, ps -> ps.setLong(1, userId), rs -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("sessionId", rs.getString("session_id"));
+            row.put("title", rs.getString("title"));
+            row.put("memorySummary", rs.getString("memory_summary"));
+            row.put("lastMessageTime", String.valueOf(rs.getTimestamp("last_message_time")));
+            row.put("createTime", String.valueOf(rs.getTimestamp("create_time")));
+            return row;
+        });
+    }
+
+    public Map<String, Object> createConversation(Long userId, String title) {
+        String sessionId = UUID.randomUUID().toString().replace("-", "");
+        String safeTitle = clean(title).isBlank() ? "新会话" : truncate(clean(title), 60);
+        update("insert into ai_conversation(session_id,user_id,title,last_message_time,deleted) values(?,?,?,now(),0)", ps -> {
+            ps.setString(1, sessionId);
+            ps.setLong(2, userId);
+            ps.setString(3, safeTitle);
+        });
+        return Map.of("sessionId", sessionId, "title", safeTitle);
+    }
+
+    public void renameConversation(String sessionId, Long userId, String title) {
+        String safeTitle = truncate(clean(title), 60);
+        if (safeTitle.isBlank()) throw BusinessException.of(400, "会话标题不能为空");
+        int changed = updateCount("update ai_conversation set title=?,update_time=now() "
+                + "where session_id=? and user_id=? and deleted=0", ps -> {
+            ps.setString(1, safeTitle);
+            ps.setString(2, sessionId);
+            ps.setLong(3, userId);
+        });
+        if (changed == 0) throw BusinessException.of(404, "会话不存在");
+    }
+
+    public void deleteConversation(String sessionId, Long userId) {
+        int changed = updateCount("update ai_conversation set deleted=1,update_time=now() "
+                + "where session_id=? and user_id=? and deleted=0", ps -> {
+            ps.setString(1, sessionId);
+            ps.setLong(2, userId);
+        });
+        if (changed == 0) throw BusinessException.of(404, "会话不存在");
+    }
+
     public PageResult<Map<String, Object>> auditList(String keyword, String status, int page, int size) {
-        StringBuilder sql = new StringBuilder("select id, session_id, question, answer, audit_status, create_time from chat_session where 1=1");
+        int safePage = Math.max(1, page);
+        int safeSize = Math.min(100, Math.max(1, size));
+        StringBuilder sql = new StringBuilder("select c.id,c.session_id,c.user_id,u.username,c.question,c.answer,c.sources,c.model_name,"
+                + "c.audit_status,c.risk_level,c.review_status,c.review_by,c.review_comment,c.review_time,c.response_ms,c.create_time "
+                + "from chat_session c left join sys_user u on u.id=c.user_id where 1=1");
         List<Object> params = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
-            sql.append(" and (question like ? or answer like ?)");
+            sql.append(" and (c.question like ? or c.answer like ? or c.session_id like ?)");
+            params.add("%" + keyword + "%");
             params.add("%" + keyword + "%");
             params.add("%" + keyword + "%");
         }
         if (status != null && !status.isBlank()) {
-            sql.append(" and audit_status = ?");
+            sql.append(" and (c.audit_status = ? or c.review_status = ?)");
+            params.add(status);
             params.add(status);
         }
-        sql.append(" order by id desc limit ? offset ?");
-        params.add(size);
-        params.add(Math.max(0, (page - 1) * size));
+        sql.append(" order by c.id desc limit ? offset ?");
+        params.add(safeSize);
+        params.add((safePage - 1) * safeSize);
 
         List<Map<String, Object>> records = query(sql.toString(), ps -> {
             for (int i = 0; i < params.size(); i++) {
@@ -240,20 +328,83 @@ public class AiService {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", rs.getLong("id"));
             row.put("sessionId", rs.getString("session_id"));
+            row.put("userId", rs.getObject("user_id"));
+            row.put("username", rs.getString("username"));
             row.put("question", rs.getString("question"));
             row.put("answer", rs.getString("answer"));
+            row.put("sources", rs.getString("sources"));
+            row.put("modelName", rs.getString("model_name"));
             row.put("auditStatus", rs.getString("audit_status"));
+            row.put("riskLevel", rs.getInt("risk_level"));
+            row.put("reviewStatus", rs.getString("review_status"));
+            row.put("reviewBy", rs.getObject("review_by"));
+            row.put("reviewComment", rs.getString("review_comment"));
+            row.put("reviewTime", String.valueOf(rs.getTimestamp("review_time")));
+            row.put("responseMs", rs.getInt("response_ms"));
             row.put("createTime", String.valueOf(rs.getTimestamp("create_time")));
             return row;
         });
-        return PageResult.of(records, countAudit(keyword, status), page, size);
+        return PageResult.of(records, countAudit(keyword, status), safePage, safeSize);
+    }
+
+    public Map<String, Object> auditDetail(long id) {
+        List<Map<String, Object>> rows = auditRowsById(id);
+        if (rows.isEmpty()) throw BusinessException.of(404, "审计记录不存在");
+        return rows.get(0);
+    }
+
+    public Map<String, Object> auditStats() {
+        String sql = "select count(*) total,sum(create_time>=curdate()) today_count,"
+                + "sum(audit_status='sensitive') sensitive_count,sum(review_status='pending') pending_count,"
+                + "round(avg(response_ms)) avg_response_ms from chat_session";
+        List<Map<String, Object>> rows = query(sql, ps -> {}, rs -> Map.of(
+                "total", rs.getLong("total"),
+                "today", rs.getLong("today_count"),
+                "sensitive", rs.getLong("sensitive_count"),
+                "pending", rs.getLong("pending_count"),
+                "avgResponseMs", rs.getLong("avg_response_ms")
+        ));
+        return rows.isEmpty() ? Map.of("total", 0, "today", 0, "sensitive", 0, "pending", 0, "avgResponseMs", 0) : rows.get(0);
+    }
+
+    public void reviewAudit(long id, Long reviewerId, String status, String comment) {
+        String reviewStatus = clean(status);
+        if (!List.of("approved", "rejected").contains(reviewStatus)) {
+            throw BusinessException.of(400, "审核状态只能是 approved 或 rejected");
+        }
+        int changed = updateCount("update chat_session set review_status=?,review_by=?,review_comment=?,review_time=now() where id=?", ps -> {
+            ps.setString(1, reviewStatus);
+            ps.setLong(2, reviewerId);
+            ps.setString(3, truncate(clean(comment), 500));
+            ps.setLong(4, id);
+        });
+        if (changed == 0) throw BusinessException.of(404, "审计记录不存在");
+    }
+
+    private List<Map<String, Object>> auditRowsById(long id) {
+        String sql = "select c.id,c.session_id,c.user_id,u.username,c.question,c.answer,c.sources,c.model_name,"
+                + "c.audit_status,c.risk_level,c.review_status,c.review_by,c.review_comment,c.review_time,c.response_ms,c.create_time "
+                + "from chat_session c left join sys_user u on u.id=c.user_id where c.id=?";
+        return query(sql, ps -> ps.setLong(1, id), rs -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", rs.getLong("id")); row.put("sessionId", rs.getString("session_id"));
+            row.put("userId", rs.getObject("user_id")); row.put("username", rs.getString("username"));
+            row.put("question", rs.getString("question")); row.put("answer", rs.getString("answer"));
+            row.put("sources", rs.getString("sources")); row.put("modelName", rs.getString("model_name"));
+            row.put("auditStatus", rs.getString("audit_status")); row.put("riskLevel", rs.getInt("risk_level"));
+            row.put("reviewStatus", rs.getString("review_status")); row.put("reviewBy", rs.getObject("review_by"));
+            row.put("reviewComment", rs.getString("review_comment")); row.put("reviewTime", String.valueOf(rs.getTimestamp("review_time")));
+            row.put("responseMs", rs.getInt("response_ms")); row.put("createTime", String.valueOf(rs.getTimestamp("create_time")));
+            return row;
+        });
     }
 
     private boolean realAiConfigured() {
         return aiEnabled && !clean(aiBaseUrl).isBlank() && !clean(aiApiKey).isBlank();
     }
 
-    private String callOpenAiCompatibleChat(String question, List<Map<String, Object>> refs) throws Exception {
+    private String callOpenAiCompatibleChat(String question, List<Map<String, Object>> refs,
+            List<Map<String, String>> context) throws Exception {
         String endpoint = clean(aiBaseUrl);
         if (endpoint.endsWith("/")) {
             endpoint = endpoint.substring(0, endpoint.length() - 1);
@@ -266,10 +417,8 @@ public class AiService {
         payload.put("model", aiChatModel);
         payload.put("temperature", 0.2);
         payload.put("stream", false);
-        payload.put("messages", List.of(
-            Map.of("role", "system", "content", systemPrompt()),
-            Map.of("role", "user", "content", buildRagPrompt(question, refs))
-        ));
+        payload.put("thinking", Map.of("type", aiThinkingEnabled ? "enabled" : "disabled"));
+        payload.put("messages", buildAiMessages(question, refs, context));
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(endpoint))
@@ -293,16 +442,14 @@ public class AiService {
     }
 
     private String callOpenAiCompatibleChatStream(String question, List<Map<String, Object>> refs,
-            Consumer<String> chunkConsumer) throws Exception {
+            List<Map<String, String>> context, Consumer<String> chunkConsumer) throws Exception {
         String endpoint = chatCompletionEndpoint();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("model", aiChatModel);
         payload.put("temperature", 0.2);
         payload.put("stream", true);
-        payload.put("messages", List.of(
-            Map.of("role", "system", "content", systemPrompt()),
-            Map.of("role", "user", "content", buildRagPrompt(question, refs))
-        ));
+        payload.put("thinking", Map.of("type", aiThinkingEnabled ? "enabled" : "disabled"));
+        payload.put("messages", buildAiMessages(question, refs, context));
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(endpoint))
@@ -400,6 +547,67 @@ public class AiService {
         return sb.toString();
     }
 
+    private List<Map<String, Object>> buildAiMessages(String question, List<Map<String, Object>> refs,
+            List<Map<String, String>> context) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt()));
+        for (Map<String, String> turn : context) {
+            messages.add(Map.of("role", "user", "content", turn.getOrDefault("question", "")));
+            messages.add(Map.of("role", "assistant", "content", turn.getOrDefault("answer", "")));
+        }
+        messages.add(Map.of("role", "user", "content", buildRagPrompt(question, refs)));
+        return messages;
+    }
+
+    private void ensureConversation(String sessionId, Long userId, String firstQuestion) {
+        String sql = "select user_id from ai_conversation where session_id=? limit 1";
+        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Long ownerId = rs.getObject("user_id") == null ? null : rs.getLong("user_id");
+                    if (ownerId != null && !ownerId.equals(userId)) {
+                        throw BusinessException.of(403, "无权访问该会话");
+                    }
+                    if (ownerId == null && userId != null) {
+                        update("update ai_conversation set user_id=?,deleted=0 where session_id=?", update -> {
+                            update.setLong(1, userId);
+                            update.setString(2, sessionId);
+                        });
+                    }
+                    return;
+                }
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("读取会话失败: " + e.getMessage(), e);
+        }
+        String title = truncate(clean(firstQuestion), 30);
+        update("insert into ai_conversation(session_id,user_id,title,last_message_time,deleted) values(?,?,?,now(),0)", ps -> {
+            ps.setString(1, sessionId);
+            if (userId == null) ps.setNull(2, java.sql.Types.BIGINT); else ps.setLong(2, userId);
+            ps.setString(3, title.isBlank() ? "新会话" : title);
+        });
+    }
+
+    private List<Map<String, String>> loadRecentContext(String sessionId, Long userId, int turns) {
+        List<Map<String, String>> rows = query(
+                "select question,answer from chat_session where session_id=? order by id desc limit ?",
+                ps -> {
+                    ps.setString(1, sessionId);
+                    ps.setInt(2, Math.max(1, Math.min(20, turns)));
+                },
+                rs -> Map.of("question", clean(rs.getString("question")), "answer", clean(rs.getString("answer"))));
+        Collections.reverse(rows);
+        return rows;
+    }
+
+    private void touchConversation(String sessionId) {
+        update("update ai_conversation set last_message_time=now(),deleted=0 where session_id=?",
+                ps -> ps.setString(1, sessionId));
+    }
+
     private List<Map<String, Object>> searchKnowledge(String term) {
         String sql = "select id, title, content, source, dept_code, doc_type, create_time from knowledge_doc where deleted = 0 and status = 1 and (title like ? or content like ? or dept_code like ?) limit 30";
         String like = "%" + term + "%";
@@ -467,28 +675,53 @@ public class AiService {
         return "您的问题中包含需要人工复核的敏感内容。请调整表述后重新咨询，或通过政民互动渠道提交正式诉求。";
     }
 
-    private void saveChat(String sessionId, String question, String answer, List<Map<String, Object>> refs, String modelName, String auditStatus) {
-        String sql = "insert into chat_session(session_id, user_id, question, answer, sources, model_name, audit_status) values(?, null, ?, ?, ?, ?, ?)";
+    private void saveChat(String sessionId, Long userId, String question, String answer,
+            List<Map<String, Object>> refs, String modelName, String auditStatus, int riskLevel, long responseMs) {
+        String sql = "insert into chat_session(session_id,user_id,question,answer,sources,model_name,audit_status,risk_level,review_status,response_ms) "
+                + "values(?,?,?,?,?,?,?,?,?,?)";
         update(sql, ps -> {
             ps.setString(1, sessionId);
-            ps.setString(2, question);
-            ps.setString(3, answer);
-            ps.setString(4, refs.toString());
-            ps.setString(5, modelName);
-            ps.setString(6, auditStatus);
+            if (userId == null) ps.setNull(2, java.sql.Types.BIGINT); else ps.setLong(2, userId);
+            ps.setString(3, question);
+            ps.setString(4, answer);
+            ps.setString(5, toJson(refs));
+            ps.setString(6, modelName);
+            ps.setString(7, auditStatus);
+            ps.setInt(8, riskLevel);
+            ps.setString(9, riskLevel > 0 ? "pending" : "auto_passed");
+            ps.setLong(10, responseMs);
         });
     }
 
+    private void validateQuestion(String question) {
+        if (question == null || question.isBlank()) {
+            throw BusinessException.of(400, "问题不能为空");
+        }
+        if (question.length() > 2000) {
+            throw BusinessException.of(400, "问题不能超过2000个字符");
+        }
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new IllegalStateException("序列化知识来源失败", e);
+        }
+    }
+
     private long countAudit(String keyword, String status) {
-        StringBuilder sql = new StringBuilder("select count(*) from chat_session where 1=1");
+        StringBuilder sql = new StringBuilder("select count(*) from chat_session c where 1=1");
         List<Object> params = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
-            sql.append(" and (question like ? or answer like ?)");
+            sql.append(" and (c.question like ? or c.answer like ? or c.session_id like ?)");
+            params.add("%" + keyword + "%");
             params.add("%" + keyword + "%");
             params.add("%" + keyword + "%");
         }
         if (status != null && !status.isBlank()) {
-            sql.append(" and audit_status = ?");
+            sql.append(" and (c.audit_status = ? or c.review_status = ?)");
+            params.add(status);
             params.add(status);
         }
         try (Connection conn = dataSource.getConnection();
@@ -562,6 +795,11 @@ public class AiService {
         return value == null ? "" : value.trim();
     }
 
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value == null ? "" : value;
+        return value.substring(0, maxLength);
+    }
+
     private double toDouble(Object value) {
         return value instanceof Number number ? number.doubleValue() : 0;
     }
@@ -571,6 +809,16 @@ public class AiService {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             binder.bind(ps);
             ps.executeUpdate();
+        } catch (Exception e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
+    }
+
+    private int updateCount(String sql, SqlBinder binder) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            binder.bind(ps);
+            return ps.executeUpdate();
         } catch (Exception e) {
             throw new IllegalStateException(e.getMessage(), e);
         }

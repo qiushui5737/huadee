@@ -25,13 +25,19 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                 Claims claims = JwtUtil.parseToken(token);
                 String role = claims.get("role", String.class);
                 String uri = request.getRequestURI();
-                if (uri.startsWith("/api/v1/admin/") && !uri.startsWith("/api/v1/admin/auth/")
+                boolean adminResource = (uri.startsWith("/api/v1/admin/") && !uri.startsWith("/api/v1/admin/auth/"))
+                        || uri.startsWith("/api/v1/ai/admin/")
+                        || uri.equals("/api/v1/ai/sensitive/words")
+                        || uri.equals("/api/v1/ai/chat/audit");
+                if (adminResource
                         && !"ADMIN".equals(role)) {
                     response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
                     objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
                     return false;
                 }
                 request.setAttribute("jwtToken", token);
+                request.setAttribute("userId", JwtUtil.getUserId(token));
+                request.setAttribute("userRole", role);
                 return true;
             }
         }
