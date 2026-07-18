@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="chat-page">
     <div class="chat-shell">
       <aside class="side-panel">

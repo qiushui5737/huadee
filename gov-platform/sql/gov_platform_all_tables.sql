@@ -239,6 +239,11 @@ CREATE TABLE IF NOT EXISTS service_record (
   current_node VARCHAR(100),
   submit_time DATETIME DEFAULT CURRENT_TIMESTAMP,
   finish_time DATETIME,
+  comment TEXT COMMENT '审批意见',
+  pay_status VARCHAR(20) DEFAULT '待支付' COMMENT '支付状态',
+  pay_amount DECIMAL(10,2) COMMENT '缴费金额',
+  pay_time DATETIME COMMENT '支付时间',
+  license_status VARCHAR(20) DEFAULT '办理中' COMMENT '证照状态',
   UNIQUE KEY uk_service_record_accept_no (accept_no),
   KEY idx_service_record_item (item_id),
   KEY idx_service_record_user (user_id)
