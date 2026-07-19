@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // E4-认证权限
 export const adminLogin = (data: { username: string; password: string }) =>
@@ -8,6 +8,7 @@ export interface RegisterData {
   gender: string; idCard: string; phone: string; email: string; deptCode: string; address: string
 }
 export const adminRegister = (data: RegisterData) => request.post('/admin/auth/register', data)
+export const register = adminRegister
 export const adminInfo = () => request.get('/admin/auth/info')
 export const adminLogout = () => request.post('/admin/auth/logout')
 export const updateProfile = (data: { realName: string; gender: string; phone: string; email: string; address: string }) =>

@@ -43,6 +43,12 @@
               <span :title="scope.row.description">{{ scope.row.description?.length > 50 ? scope.row.description.substring(0, 50) + '...' : scope.row.description }}</span>
             </template>
           </el-table-column>
+          <el-table-column prop="price" label="缴费金额" width="110" align="center">
+            <template #default="scope">
+              <span v-if="scope.row.price && scope.row.price > 0" style="color: #f56c6c; font-weight: bold;">¥{{ scope.row.price }}</span>
+              <el-tag v-else size="small" type="success">免费</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="80">
             <template #default="scope">
               <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
@@ -68,6 +74,10 @@
         <el-descriptions-item label="所属分类">{{ getCategoryName(detailItem.category) }}</el-descriptions-item>
         <el-descriptions-item label="承办部门">{{ getDeptName(detailItem.deptCode) }}</el-descriptions-item>
         <el-descriptions-item label="事项描述" :span="2">{{ detailItem.description }}</el-descriptions-item>
+        <el-descriptions-item label="缴费金额">
+          <span v-if="detailItem.price && detailItem.price > 0" style="color: #f56c6c; font-weight: bold;">¥{{ detailItem.price }}</span>
+          <span v-else>免费办理</span>
+        </el-descriptions-item>
         <el-descriptions-item label="申请材料" :span="2">
           <div v-if="detailItem.formSchema" class="material-list">
             <div v-for="(material, index) in parseFormSchema(detailItem.formSchema)" :key="index" class="material-item">
@@ -112,6 +122,10 @@
         </el-form-item>
         <el-form-item label="事项描述">
           <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入事项描述" />
+        </el-form-item>
+        <el-form-item label="缴费金额">
+          <el-input-number v-model="formData.price" :min="0" :precision="2" :step="10" style="width: 200px;" />
+          <span style="margin-left: 8px; color: #999; font-size: 12px;">元（设为0表示免费办理）</span>
         </el-form-item>
         <el-form-item label="申请材料">
           <div class="material-input">
@@ -165,6 +179,7 @@ const formData = reactive({
   deptCode: '',
   description: '',
   materials: [] as string[],
+  price: 0,
   status: 1
 })
 
@@ -259,6 +274,7 @@ const editItem = (item: any) => {
   formData.deptCode = item.deptCode
   formData.description = item.description
   formData.materials = parseFormSchema(item.formSchema)
+  formData.price = item.price != null ? Number(item.price) : 0
   formData.status = item.status
   addDialogVisible.value = true
 }
@@ -272,6 +288,7 @@ const closeDialog = () => {
   formData.deptCode = ''
   formData.description = ''
   formData.materials = []
+  formData.price = 0
   formData.status = 1
   newMaterial.value = ''
 }
@@ -307,6 +324,7 @@ const submitForm = async () => {
     category: formData.category,
     description: formData.description,
     formSchema: JSON.stringify({ materials: formData.materials }),
+    price: formData.price,
     status: formData.status
   }
   

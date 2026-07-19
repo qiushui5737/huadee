@@ -66,4 +66,11 @@ public class JwtUtil {
     public static Long getUserId(String token) {
         return parseToken(token).get("userId", Number.class).longValue();
     }
+
+    /**
+     * 从Token中获取用户ID（别名方法）
+     */
+    public static Long getUserIdFromToken(String token) {
+        return getUserId(token);
+    }
 }

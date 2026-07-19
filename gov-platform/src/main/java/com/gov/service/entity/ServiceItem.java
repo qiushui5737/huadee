@@ -27,4 +27,7 @@ public class ServiceItem extends BaseEntity {
     private String formSchema;
 
     private Integer status;
+
+    @TableField("price")
+    private java.math.BigDecimal price;
 }

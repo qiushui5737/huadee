@@ -1,6 +1,7 @@
 package com.gov.service.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.gov.service.entity.ServiceRecord;
 import com.gov.service.mapper.ServiceRecordMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,10 @@ public class ServiceRecordService {
 
     public List<ServiceRecord> list() {
         return serviceRecordMapper.selectList(new QueryWrapper<ServiceRecord>().orderByDesc("submit_time"));
+    }
+
+    public List<ServiceRecord> list(Wrapper<ServiceRecord> queryWrapper) {
+        return serviceRecordMapper.selectList(queryWrapper);
     }
 
     public List<ServiceRecord> listByStatus(String status) {
@@ -53,9 +58,10 @@ public class ServiceRecordService {
         return listByUserId(userId);
     }
 
-    public ServiceRecord createRecord(Long itemId, String userName, String formData) {
+    public ServiceRecord createRecord(Long itemId, Long userId, String userName, String formData) {
         ServiceRecord record = new ServiceRecord();
         record.setItemId(itemId);
+        record.setUserId(userId);
         record.setUserName(userName);
         record.setFormData(formData);
         record.setStatus("提交申请");

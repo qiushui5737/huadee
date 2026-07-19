@@ -62,6 +62,23 @@
                 </template>
               </el-table-column>
               <el-table-column prop="userName" label="申请人" width="100" />
+              <el-table-column label="申请材料" min-width="200">
+                <template #default="scope">
+                  <div v-if="scope.row.materials && scope.row.materials.length > 0" class="materials-tags">
+                    <el-tag v-for="(m, idx) in scope.row.materials" :key="idx" size="small" type="info" class="material-tag">{{ m }}</el-tag>
+                  </div>
+                  <span v-else style="color:#999;">无材料要求</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="缴费" width="120" align="center">
+                <template #default="scope">
+                  <div v-if="scope.row.payAmount && scope.row.payAmount > 0">
+                    <span style="color: #f56c6c; font-weight: bold; font-size: 13px;">¥{{ scope.row.payAmount }}</span>
+                    <el-tag :type="scope.row.payStatus === '已支付' ? 'success' : 'warning'" size="small" style="margin-left: 4px;">{{ scope.row.payStatus || '待支付' }}</el-tag>
+                  </div>
+                  <el-tag v-else size="small" type="success">免费</el-tag>
+                </template>
+              </el-table-column>
               <el-table-column prop="status" label="状态" width="100">
                 <template #default="scope">
                   <el-tag :type="getStatusType(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
@@ -138,8 +155,33 @@
         <el-descriptions-item label="提交时间">{{ detailRecord.submitTime }}</el-descriptions-item>
         <el-descriptions-item label="办结时间">{{ detailRecord.finishTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="审批意见">{{ detailRecord.comment || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="表单数据" :span="2">
-          <pre style="max-height:200px; overflow-y:auto; background:#f5f5f5; padding:10px; border-radius:4px;">{{ formatFormData(detailRecord.formData) }}</pre>
+        <el-descriptions-item label="缴费信息">
+          <template v-if="detailRecord.payAmount && detailRecord.payAmount > 0">
+            <span style="color: #f56c6c; font-weight: bold;">¥{{ detailRecord.payAmount }}</span>
+            <el-tag :type="detailRecord.payStatus === '已支付' ? 'success' : 'warning'" size="small" style="margin-left: 8px;">{{ detailRecord.payStatus || '待支付' }}</el-tag>
+            <span v-if="detailRecord.payTime" style="color: #999; font-size: 12px; margin-left: 8px;">缴费时间: {{ detailRecord.payTime }}</span>
+          </template>
+          <el-tag v-else size="small" type="success">免费办理</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="申请材料" :span="2">
+          <div v-if="detailMaterials.length > 0" class="materials-require">
+            <div v-for="(m, idx) in detailMaterials" :key="idx" class="material-req-item">
+              <el-icon><Document /></el-icon>
+              <span>{{ m }}</span>
+              <span v-if="getMaterialValue(idx)" class="material-submitted">已提交: {{ getMaterialValue(idx) }}</span>
+              <span v-else class="material-not-submitted">未提交</span>
+            </div>
+          </div>
+          <span v-else style="color:#999;">该事项无材料要求</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="填写内容" :span="2">
+          <div v-if="parsedFormData.length > 0" class="form-data-table">
+            <div v-for="field in parsedFormData" :key="field.key" class="form-data-row">
+              <span class="form-data-label">{{ field.label }}</span>
+              <span class="form-data-value">{{ field.value || '-' }}</span>
+            </div>
+          </div>
+          <span v-else style="color:#999;">无提交内容</span>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -195,7 +237,7 @@
       </el-form>
       <template #footer>
         <el-button @click="approveDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmApprove">{{ isReject.value ? '确认驳回' : '确认通过' }}</el-button>
+        <el-button type="primary" @click="confirmApprove">{{ isReject ? '确认驳回' : '确认通过' }}</el-button>
       </template>
     </el-dialog>
 
@@ -217,10 +259,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+import { Search, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { approvalRecords, approve, batchApprove, getInquiries, getAllInquiries, replyInquiry } from '@/api/service'
+import { approvalRecords, approve, batchApprove, getInquiries, getAllInquiries, replyInquiry, recordDetail } from '@/api/service'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -294,12 +336,96 @@ const getStepIndex = (status: string) => {
   }
 }
 
+const fieldLabelMap: Record<string, string> = {
+  userName: '申请人姓名',
+  idCard: '身份证号',
+  phone: '联系电话',
+  address: '联系地址',
+  reason: '申请事由'
+}
+
+// 从事项formSchema中解析材料名称列表
+const getMaterialLabels = (formSchema: string): string[] => {
+  if (!formSchema) return []
+  try {
+    const schema = JSON.parse(formSchema)
+    if (schema.materials && Array.isArray(schema.materials)) {
+      return schema.materials
+    }
+  } catch { /* ignore */ }
+  return []
+}
+
+// 详情弹窗中的材料要求列表
+const detailMaterials = computed(() => {
+  return getMaterialLabels(detailRecord.formSchema)
+})
+
+// 获取用户提交的某个材料的值
+const getMaterialValue = (idx: number): string => {
+  if (!detailRecord.formData) return ''
+  try {
+    const data = JSON.parse(detailRecord.formData)
+    const val = data[`material_${idx}`]
+    return val ? String(val) : ''
+  } catch {
+    return ''
+  }
+}
+
+const parsedFormData = computed(() => {
+  if (!detailRecord.formData) return []
+  try {
+    const data = JSON.parse(detailRecord.formData)
+    // 获取事项的材料名称列表
+    const materialLabels = getMaterialLabels(detailRecord.formSchema)
+    // 过滤掉系统字段，只展示用户填写的业务字段
+    const systemFields = ['itemId', 'acceptNo', 'itemName', 'formData']
+    return Object.entries(data)
+      .filter(([key]) => !systemFields.includes(key))
+      .map(([key, value]) => {
+        // 如果是material_开头的字段，用材料名称作为label
+        let label = fieldLabelMap[key] || key
+        if (key.startsWith('material_')) {
+          const idx = parseInt(key.replace('material_', ''))
+          if (!isNaN(idx) && idx < materialLabels.length) {
+            label = materialLabels[idx]
+          }
+        }
+        return { key, label, value: value != null ? String(value) : '-' }
+      })
+  } catch {
+    return []
+  }
+})
+
+const getFormSummary = (formData: string) => {
+  if (!formData) return ''
+  try {
+    const data = JSON.parse(formData)
+    const parts: string[] = []
+    if (data.userName) parts.push(data.userName)
+    if (data.phone) parts.push(data.phone)
+    if (data.reason) parts.push(data.reason)
+    // 显示自定义材料字段摘要
+    Object.keys(data).forEach(key => {
+      if (key.startsWith('material_') && data[key]) {
+        const val = String(data[key])
+        parts.push(val.length > 10 ? val.substring(0, 10) + '...' : val)
+      }
+    })
+    return parts.join(' | ')
+  } catch {
+    return formData.length > 30 ? formData.substring(0, 30) + '...' : formData
+  }
+}
+
 const formatFormData = (formData: string) => {
   try {
     const data = JSON.parse(formData)
     return JSON.stringify(data, null, 2)
   } catch {
-    return formData
+    return formData || ''
   }
 }
 
@@ -343,6 +469,15 @@ const loadInquiries = async () => {
   inquiryLoading.value = false
 }
 
+const loadPendingInquiryCount = async () => {
+  try {
+    const res = await getAllInquiries()
+    inquiries.value = res.data || []
+  } catch (e) {
+    // ignore
+  }
+}
+
 const handleTabChange = (tab: string) => {
   if (tab === 'inquiry') {
     loadInquiries()
@@ -357,8 +492,18 @@ const viewDetail = async (row: any) => {
   Object.assign(detailRecord, row)
   detailDialogVisible.value = true
   
-  const res = await getInquiries(row.acceptNo)
-  detailInquiries.value = res.data || []
+  // 通过API获取完整记录详情（包含formData）
+  try {
+    const res = await recordDetail(row.acceptNo)
+    if (res.data) {
+      Object.assign(detailRecord, res.data)
+    }
+  } catch (e) {
+    // ignore
+  }
+  
+  const inqRes = await getInquiries(row.acceptNo)
+  detailInquiries.value = inqRes.data || []
 }
 
 const handleApprove = (row: any) => {
@@ -389,6 +534,9 @@ const confirmApprove = async () => {
     approveDialogVisible.value = false
     detailDialogVisible.value = false
     loadRecords()
+    loadPendingInquiryCount()
+  } else {
+    ElMessage.error(res.message || '操作失败')
   }
 }
 
@@ -432,8 +580,18 @@ const confirmReply = async () => {
   }
 }
 
+let inquiryTimer: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   loadRecords()
+  loadPendingInquiryCount()
+  inquiryTimer = setInterval(() => {
+    loadPendingInquiryCount()
+  }, 10000)
+})
+
+onBeforeUnmount(() => {
+  if (inquiryTimer) clearInterval(inquiryTimer)
 })
 </script>
 
@@ -576,8 +734,100 @@ onMounted(() => {
   color: #f56c6c;
 }
 
+.form-summary {
+  font-size: 12px;
+  color: #606266;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.materials-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.material-tag {
+  margin: 2px 0;
+}
+
+.materials-require {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-req-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.material-req-item :deep(.el-icon) {
+  color: #1890ff;
+}
+
+.material-submitted {
+  margin-left: auto;
+  color: #52c41a;
+  font-size: 12px;
+}
+
+.material-not-submitted {
+  margin-left: auto;
+  color: #f56c6c;
+  font-size: 12px;
+}
+
 .empty-state {
   padding: 20px;
   text-align: center;
+}
+
+.form-data-table {
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.form-data-row {
+  display: flex;
+  border-bottom: 1px solid #ebeef5;
+  line-height: 36px;
+}
+
+.form-data-row:last-child {
+  border-bottom: none;
+}
+
+.form-data-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.form-data-label {
+  width: 120px;
+  min-width: 120px;
+  padding: 0 12px;
+  font-weight: bold;
+  color: #606266;
+  background: #f5f7fa;
+  border-right: 1px solid #ebeef5;
+  font-size: 14px;
+}
+
+.form-data-value {
+  flex: 1;
+  padding: 0 12px;
+  color: #303133;
+  font-size: 14px;
+  word-break: break-all;
 }
 </style>

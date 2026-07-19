@@ -247,6 +247,10 @@
         <el-descriptions-item label="所属分类">{{ getCategoryName(currentItem?.category) }}</el-descriptions-item>
         <el-descriptions-item label="承办部门">{{ getDeptName(currentItem?.deptCode) }}</el-descriptions-item>
         <el-descriptions-item label="事项描述" :span="2">{{ currentItem?.description }}</el-descriptions-item>
+        <el-descriptions-item label="缴费金额">
+          <span v-if="currentItem?.price && currentItem?.price > 0" style="color: #f56c6c; font-weight: bold;">¥{{ currentItem.price }}</span>
+          <el-tag v-else size="small" type="success">免费</el-tag>
+        </el-descriptions-item>
       </el-descriptions>
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>

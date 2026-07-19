@@ -3,6 +3,7 @@ package com.gov.portal.controller;
 import com.gov.common.result.Result;
 import com.gov.admin.entity.SysUser;
 import com.gov.admin.mapper.SysUserMapper;
+import com.gov.admin.service.TokenSessionService;
 import com.gov.common.utils.JwtUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +17,12 @@ import java.util.Map;
 public class PortalController {
 
     private final SysUserMapper userMapper;
+    private final TokenSessionService tokenSessionService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public PortalController(SysUserMapper userMapper) {
+    public PortalController(SysUserMapper userMapper, TokenSessionService tokenSessionService) {
         this.userMapper = userMapper;
+        this.tokenSessionService = tokenSessionService;
     }
 
     @PostMapping("/auth/register")
@@ -86,13 +89,16 @@ public class PortalController {
             roles = java.util.Collections.singletonList("USER");
         }
 
+        String token = JwtUtil.generateToken(user.getId(), user.getUsername(), roles.get(0));
+        tokenSessionService.save(token, user.getId());
+
         Map<String, Object> result = new HashMap<>();
         result.put("id", user.getId());
         result.put("username", user.getUsername());
         result.put("realName", user.getRealName());
         result.put("phone", user.getPhone());
         result.put("roles", roles);
-        result.put("token", JwtUtil.generateToken(user.getId(), user.getUsername(), roles.get(0)));
+        result.put("token", token);
         result.put("expiresIn", JwtUtil.EXPIRATION_SECONDS);
 
         return Result.success(result, "登录成功");
