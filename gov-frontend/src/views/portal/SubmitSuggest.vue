@@ -150,6 +150,30 @@
         </el-form-item>
       </el-form>
     </div>
+
+    <!-- 进度查询弹窗 -->
+    <el-dialog v-model="queryVisible" title="建议进度查询" width="550px">
+      <div style="margin-bottom: 16px; display: flex; gap: 10px;">
+        <el-input v-model="querySuggestNo" placeholder="请输入建议单号" @keyup.enter="handleQuery" />
+        <el-button type="primary" :loading="queryLoading" @click="handleQuery">查询</el-button>
+      </div>
+      <div v-if="queryResult" class="query-result">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="建议单号">{{ queryResult.suggestNo }}</el-descriptions-item>
+          <el-descriptions-item label="建议标题">{{ queryResult.title }}</el-descriptions-item>
+          <el-descriptions-item label="建议类型">{{ queryResult.type }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="statusTagType(queryResult.status)">{{ queryResult.status }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="提交时间">{{ queryResult.createTime }}</el-descriptions-item>
+          <el-descriptions-item label="答复期限">{{ queryResult.deadline || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="答复内容" v-if="queryResult.replyContent">
+            <div style="white-space: pre-wrap;">{{ queryResult.replyContent }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="答复时间" v-if="queryResult.replyTime">{{ queryResult.replyTime }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -158,7 +182,7 @@ import { ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadUserFile } from 'element-plus'
-import { submitMessage } from '@/api/interaction'
+import { submitSuggestion, suggestionProgress } from '@/api/interaction'
 
 const router = useRouter()
 const formRef = ref()
@@ -225,9 +249,41 @@ const rules = {
   isSecret: [{ required: true, message: '请选择是否保密', trigger: 'change' }]
 }
 
-// 查询回复
+// 查询回复弹窗
+const queryVisible = ref(false)
+const querySuggestNo = ref('')
+const queryResult = ref<any>(null)
+const queryLoading = ref(false)
+
 const showQuery = () => {
-  ElMessage.info('回复查询功能开发中')
+  queryVisible.value = true
+  queryResult.value = null
+  querySuggestNo.value = ''
+}
+
+const handleQuery = async () => {
+  if (!querySuggestNo.value.trim()) {
+    ElMessage.warning('请输入建议单号')
+    return
+  }
+  queryLoading.value = true
+  try {
+    const res: any = await suggestionProgress(querySuggestNo.value.trim())
+    if (res.code === 200) {
+      queryResult.value = res.data
+    } else {
+      ElMessage.error(res.message || '查询失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '查询失败，请检查单号是否正确')
+  } finally {
+    queryLoading.value = false
+  }
+}
+
+const statusTagType = (status: string) => {
+  const map: Record<string, string> = { '待受理': 'warning', '处理中': '', '已答复': 'success', '已办结': 'info' }
+  return map[status] || ''
 }
 
 // 提交建议
@@ -250,17 +306,32 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
-    const res: any = await submitMessage({
+    const res: any = await submitSuggestion({
       title: form.title,
       content: form.content,
-      contactName: form.name,
       type: form.type,
-      targetDept: form.city
+      realName: form.name,
+      idCard: form.idCard,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      province: form.province,
+      city: form.city,
+      district: form.district,
+      detailAddress: form.detailAddress,
+      isPublic: form.isPublic,
+      isSecret: form.isSecret
     })
 
     if (res.code === 200) {
-      ElMessage.success('建议提交成功！')
-      router.push('/interaction')
+      ElMessageBox.alert(
+        `您的建议已提交成功！<br/>建议单号：<strong>${res.data.suggestNo}</strong><br/>答复期限：${res.data.deadline || '-'}<br/><br/>请牢记建议单号，用于查询建议进度。`,
+        '提交成功',
+        { dangerouslyUseHTMLString: true, confirmButtonText: '知道了' }
+      )
+      // 重置表单
+      formRef.value.resetFields()
+      form.content = ''
     } else {
       ElMessage.error(res.message || '提交失败')
     }

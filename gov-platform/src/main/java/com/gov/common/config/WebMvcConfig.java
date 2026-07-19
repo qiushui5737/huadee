@@ -7,7 +7,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
     private final JwtAuthInterceptor interceptor;
     public WebMvcConfig(JwtAuthInterceptor interceptor) { this.interceptor = interceptor; }
     @Override public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(interceptor).addPathPatterns("/api/v1/admin/**")
+        registry.addInterceptor(interceptor)
+                .addPathPatterns("/api/v1/admin/**")
+                .addPathPatterns("/api/v1/consultation/**")
+                .addPathPatterns("/api/v1/interaction/message/**")
+                .addPathPatterns("/api/v1/suggestion/**")
+                .addPathPatterns("/api/v1/complaint/**")
+                .addPathPatterns("/api/v1/collection/**")
                 .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register");
     }
 }

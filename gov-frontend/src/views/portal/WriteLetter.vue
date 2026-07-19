@@ -19,6 +19,7 @@
         </div>
       </div>
       <div class="top-actions">
+        <el-switch v-model="form.isPublic" active-text="公开" inactive-text="私密" style="margin-right: 12px;" />
         <span class="action-link">抄送</span>
         <span class="action-link">密送</span>
         <span class="action-divider"></span>
@@ -220,7 +221,9 @@
         ref="editorRef"
         class="editor-content"
         contenteditable="true"
-        @input="handleInput"
+        @compositionstart="isComposing = true"
+        @compositionend="onCompositionEnd"
+        @blur="syncContent"
         placeholder="输入正文"
       ></div>
     </div>
@@ -273,6 +276,7 @@ const submitting = ref(false)
 const showFormatToolbar = ref(true)
 const deptSelectorVisible = ref(false)
 const tempDept = ref('')
+const isComposing = ref(false)
 
 // 部门选项
 const deptOptions: Record<string, string> = {
@@ -294,7 +298,8 @@ const form = reactive({
   content: '',
   contactName: '',
   targetDept: '',
-  type: '咨询'
+  type: '咨询',
+  isPublic: true
 })
 
 // 用户信息（从localStorage或store获取）
@@ -377,15 +382,21 @@ const handleInsert = (command: string) => {
   editorRef.value?.focus()
 }
 
-// 输入处理
-const handleInput = () => {
+// 输入处理：仅在失焦时同步，避免响应式更新干扰 contenteditable 光标
+const syncContent = () => {
   if (editorRef.value) {
     form.content = editorRef.value.innerHTML
   }
 }
 
+const onCompositionEnd = () => {
+  isComposing.value = false
+}
+
 // 提交
 const handleSubmit = async () => {
+  // 先同步编辑器内容（点击按钮时编辑器可能未失焦）
+  syncContent()
   if (!form.title.trim()) {
     ElMessage.warning('请输入信件标题')
     return
@@ -402,7 +413,8 @@ const handleSubmit = async () => {
       contactName: userInfo.name
     })
     if (res.code === 200) {
-      ElMessage.success('信件发送成功')
+      const consultNo = res.data?.consultNo || ''
+      ElMessage.success(`信件发送成功！信件单号：${consultNo}`)
       router.push('/interaction')
     } else {
       ElMessage.error(res.message || '发送失败')

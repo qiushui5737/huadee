@@ -45,6 +45,10 @@ public class AuthService {
                 .eq(SysUser::getUsername, request.getUsername().trim()));
         if (count > 0) throw BusinessException.of(409, "用户名已存在");
 
+        long idCardCount = userMapper.selectCount(Wrappers.<SysUser>lambdaQuery()
+                .eq(SysUser::getIdCard, request.getIdCard().trim().toUpperCase()));
+        if (idCardCount > 0) throw BusinessException.of(409, "该身份证号已被注册");
+
         SysUser user = new SysUser();
         user.setUsername(request.getUsername().trim());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
