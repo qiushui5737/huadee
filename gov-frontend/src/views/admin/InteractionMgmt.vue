@@ -110,7 +110,7 @@
     </el-card>
 
     <!-- 留言详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="留言详情" width="600px">
+    <el-dialog v-model="detailVisible" title="留言详情" width="700px">
       <el-descriptions :column="1" border v-if="currentMessage">
         <el-descriptions-item label="标题">{{ currentMessage.title }}</el-descriptions-item>
         <el-descriptions-item label="留言人">{{ currentMessage.userName }}</el-descriptions-item>
@@ -119,12 +119,37 @@
           <el-tag :type="statusTagType(currentMessage.status)">{{ currentMessage.status }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="留言内容" style="white-space: pre-wrap;">{{ currentMessage.content }}</el-descriptions-item>
-        <el-descriptions-item label="回复内容" v-if="currentMessage.replyContent" style="white-space: pre-wrap;">
-          {{ currentMessage.replyContent }}
-        </el-descriptions-item>
-        <el-descriptions-item label="回复人" v-if="currentMessage.replyBy">{{ currentMessage.replyBy }}</el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ currentMessage.createTime }}</el-descriptions-item>
       </el-descriptions>
+
+      <!-- 对话记录 -->
+      <div v-if="messageReplies.length > 0" class="conversation-section">
+        <h4>交流记录</h4>
+        <div class="conversation-list">
+          <div
+            v-for="reply in messageReplies"
+            :key="reply.id"
+            class="conversation-item"
+            :class="{ 'is-admin': reply.userType === 'ADMIN', 'is-user': reply.userType === 'USER' }"
+          >
+            <div class="conversation-avatar">
+              <el-avatar :size="32" :style="{ background: reply.userType === 'ADMIN' ? '#409eff' : '#67c23a' }">
+                {{ reply.userType === 'ADMIN' ? '官' : '民' }}
+              </el-avatar>
+            </div>
+            <div class="conversation-body">
+              <div class="conversation-header">
+                <span class="conversation-name">{{ reply.userName }}</span>
+                <el-tag size="small" :type="reply.userType === 'ADMIN' ? '' : 'success'">
+                  {{ reply.userType === 'ADMIN' ? '管理员' : '群众' }}
+                </el-tag>
+                <span class="conversation-time">{{ reply.createTime }}</span>
+              </div>
+              <div class="conversation-content">{{ reply.content }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </el-dialog>
 
     <!-- 分派弹窗 -->
@@ -175,7 +200,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { messageList as fetchMessageList, replyMessage, messageStats, superviseMessage } from '@/api/interaction'
+import { messageList as fetchMessageList, replyMessage, messageStats, superviseMessage, messageDetail } from '@/api/interaction'
 import request from '@/utils/request'
 
 // 部门编码映射
@@ -199,6 +224,7 @@ const detailVisible = ref(false)
 const dispatchVisible = ref(false)
 const replyVisible = ref(false)
 const currentMessage = ref<any>(null)
+const messageReplies = ref<any[]>([])
 const dispatchDept = ref('')
 const replyContent = ref('')
 const replyOperator = ref('')
@@ -224,9 +250,19 @@ const loadMessages = async () => {
 }
 
 // 显示详情
-const showDetail = (row: any) => {
+const showDetail = async (row: any) => {
   currentMessage.value = row
+  messageReplies.value = []
   detailVisible.value = true
+  // 加载对话记录
+  try {
+    const res: any = await messageDetail(row.id)
+    if (res.code === 200) {
+      messageReplies.value = res.data.replies || []
+    }
+  } catch (e) {
+    console.error('加载对话记录失败', e)
+  }
 }
 
 // 显示分派弹窗
@@ -402,5 +438,74 @@ onMounted(() => {
   color: #666;
   max-height: 100px;
   overflow-y: auto;
+}
+
+// 对话记录
+.conversation-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+
+  h4 {
+    font-size: 15px;
+    color: #303133;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    border-left: 3px solid #409eff;
+  }
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversation-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f5f7fa;
+
+  &.is-admin {
+    background: #ecf5ff;
+    border-left: 3px solid #409eff;
+  }
+
+  &.is-user {
+    background: #f0f9eb;
+    border-left: 3px solid #67c23a;
+  }
+
+  .conversation-body {
+    flex: 1;
+  }
+
+  .conversation-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+
+    .conversation-name {
+      font-weight: 600;
+      color: #303133;
+    }
+
+    .conversation-time {
+      font-size: 12px;
+      color: #909399;
+      margin-left: auto;
+    }
+  }
+
+  .conversation-content {
+    white-space: pre-wrap;
+    font-size: 13px;
+    color: #303133;
+    line-height: 1.5;
+  }
 }
 </style>

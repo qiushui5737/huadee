@@ -136,48 +136,32 @@
       </div>
     </div>
 
-    <!-- 信件详情弹窗 -->
-    <el-dialog v-model="letterDetailVisible" title="信件详情" width="600px">
-      <el-descriptions :column="1" border v-if="currentLetter">
-        <el-descriptions-item label="标题">{{ currentLetter.title }}</el-descriptions-item>
-        <el-descriptions-item label="留言人">{{ currentLetter.userName }}</el-descriptions-item>
-        <el-descriptions-item label="信件类型">
-          <el-tag :type="typeTagType(currentLetter.type)" size="small">{{ currentLetter.type || '咨询' }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="statusTagType(currentLetter.status)" size="small">{{ currentLetter.status }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="信件内容">{{ currentLetter.content }}</el-descriptions-item>
-        <el-descriptions-item label="回复内容" v-if="currentLetter.replyContent">
-          {{ currentLetter.replyContent }}
-        </el-descriptions-item>
-        <el-descriptions-item label="回复人" v-if="currentLetter.replyBy">
-          {{ currentLetter.replyBy }}
-        </el-descriptions-item>
-        <el-descriptions-item label="提交时间">{{ currentLetter.createTime }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
 
-    <!-- 评价弹窗 -->
-    <el-dialog v-model="rateVisible" title="信件评价" width="400px">
-      <el-form label-width="80px">
-        <el-form-item label="评分">
-          <el-rate v-model="rateForm.rating" :max="5" show-text />
-        </el-form-item>
-        <el-form-item label="评价内容">
-          <el-input v-model="rateForm.content" type="textarea" :rows="3" placeholder="请输入评价内容（选填）" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="rateVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitRate">提交评价</el-button>
-      </template>
+
+    <!-- 查询信件弹窗 -->
+    <el-dialog v-model="queryLetterVisible" title="查询信件" width="650px">
+      <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;">
+        <el-input v-model="queryConsultNo" placeholder="输入信件单号精确查询" style="width: 220px;" @keyup.enter="doQueryLetter" />
+        <el-input v-model="queryKeyword" placeholder="输入标题关键词模糊查询" style="flex: 1;" @keyup.enter="doQueryLetter" />
+        <el-button type="primary" @click="doQueryLetter">查询</el-button>
+      </div>
+      <div v-if="queryResults.length > 0">
+        <div v-for="item in queryResults" :key="item.id" class="letter-item" @click="queryLetterVisible = false; showLetterDetail(item)" style="cursor: pointer; padding: 12px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center;">
+          <el-icon style="color: #409eff; margin-right: 12px;"><Message /></el-icon>
+          <span style="flex: 1;">{{ item.title }}</span>
+          <el-tag v-if="!item.isPublic" type="warning" size="small" style="margin-right: 8px;">私密</el-tag>
+          <el-tag :type="statusTagType(item.status)" size="small">{{ item.status }}</el-tag>
+          <span style="margin-left: 12px; color: #999; font-size: 13px;">{{ item.consultNo }}</span>
+        </div>
+      </div>
+      <el-empty v-else-if="querySearched" description="未找到相关信件" />
+      <el-empty v-else description="输入单号或关键词后点击查询" />
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -185,7 +169,7 @@ import {
   Microphone, User
 } from '@element-plus/icons-vue'
 import {
-  submitMessage, messageList as fetchMessageList, messageDetail, rateMessage
+  submitMessage, messageList as fetchMessageList
 } from '@/api/interaction'
 
 const router = useRouter()
@@ -203,8 +187,6 @@ const navItems = [
 // 来信列表
 const letterList = ref<any[]>([])
 const letterStats = ref(0)
-const letterDetailVisible = ref(false)
-const currentLetter = ref<any>(null)
 
 // 在线访谈（模拟数据）
 const currentInterview = ref({
@@ -234,22 +216,20 @@ const collectionList = ref([
   }
 ])
 
-// 来信列表
-const rateVisible = ref(false)
-const rateForm = reactive({ id: 0, rating: 5, content: '' })
-
 // 导航点击
 const handleNavClick = (item: any) => {
-  if (item.action === 'mailbox' || item.action === 'consult') {
-    showWriteLetter()
+  if (item.action === 'mailbox') {
+    router.push({ name: 'public-letters' })
+  } else if (item.action === 'consult') {
+    router.push({ name: 'consultation' })
   } else if (item.action === 'suggest') {
     router.push({ name: 'submit-suggest' })
   } else if (item.action === 'complain') {
-    showWriteLetter()
+    router.push({ name: 'submit-complaint' })
   } else if (item.action === 'interview') {
     showAskQuestion()
   } else if (item.action === 'collection') {
-    showMoreCollection()
+    router.push({ name: 'collection-list' })
   }
 }
 
@@ -263,22 +243,43 @@ const submitLetter = async () => {
 }
 
 // 查询信件
+const queryLetterVisible = ref(false)
+const queryKeyword = ref('')
+const queryConsultNo = ref('')
+const queryResults = ref<any[]>([])
+const querySearched = ref(false)
 const showQueryLetter = () => {
-  ElMessage.info('查询信件功能开发中')
+  queryKeyword.value = ''
+  queryConsultNo.value = ''
+  queryResults.value = []
+  querySearched.value = false
+  queryLetterVisible.value = true
 }
-
-// 信件详情
-const showLetterDetail = async (row: any) => {
+const doQueryLetter = async () => {
+  if (!queryKeyword.value.trim() && !queryConsultNo.value.trim()) {
+    ElMessage.warning('请输入信件单号或关键词')
+    return
+  }
   try {
-    const res: any = await messageDetail(row.id)
+    const params: any = { page: 1, size: 20 }
+    if (queryConsultNo.value.trim()) params.consultNo = queryConsultNo.value.trim()
+    if (queryKeyword.value.trim()) params.keyword = queryKeyword.value.trim()
+    const res: any = await fetchMessageList(params)
     if (res.code === 200) {
-      currentLetter.value = res.data
-      letterDetailVisible.value = true
+      queryResults.value = res.data.records
+      querySearched.value = true
+      if (queryResults.value.length === 0) {
+        ElMessage.info('未找到相关信件')
+      }
     }
   } catch (e) {
-    currentLetter.value = row
-    letterDetailVisible.value = true
+    ElMessage.error('查询失败')
   }
+}
+
+// 信件详情 - 跳转到详情页
+const showLetterDetail = (row: any) => {
+  router.push({ name: 'letter-detail', params: { id: row.id } })
 }
 
 // 往期访谈
@@ -304,26 +305,6 @@ const showResultFeedback = () => {
 // 征集详情
 const showCollectionDetail = (item: any) => {
   ElMessage.info(`查看征集详情：${item.title}`)
-}
-
-// 评价
-const showRate = (row: any) => {
-  rateForm.id = row.id
-  rateForm.rating = 5
-  rateForm.content = ''
-  rateVisible.value = true
-}
-
-const submitRate = async () => {
-  try {
-    const res: any = await rateMessage(rateForm.id, { rating: rateForm.rating, content: rateForm.content })
-    if (res.code === 200) {
-      ElMessage.success('评价成功')
-      rateVisible.value = false
-    }
-  } catch (e) {
-    ElMessage.error('评价失败')
-  }
 }
 
 // 加载来信列表

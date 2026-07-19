@@ -30,4 +30,6 @@ public class Message extends BaseEntity {
     private LocalDateTime replyTime;
     private Integer rating;       // 评价星级 1-5
     private String ratingContent; // 评价内容
+    private Boolean isPublic;     // 是否公开: true-公开, false-私密
+    private String consultNo;     // 信件单号
 }
