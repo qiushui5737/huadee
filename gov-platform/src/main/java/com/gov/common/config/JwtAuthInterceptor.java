@@ -3,6 +3,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gov.common.result.Result;
 import com.gov.common.utils.JwtUtil;
 import com.gov.admin.service.TokenSessionService;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -33,7 +34,7 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                     objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
                     return false;
                 }
-                // B端咨询管理接口需要ADMIN角色（列表/答复/状态/办结/统计）
+                // B端咨询管理接口需要ADMIN角色
                 if (uri.startsWith("/api/v1/consultation/") && !"ADMIN".equals(role)) {
                     String method = request.getMethod();
                     boolean isCEnd = "GET".equals(method) && uri.matches(".*/progress/.*")
@@ -90,7 +91,6 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                         return false;
                     }
                 }
-                request.setAttribute("jwtToken", token);
                 return true;
             }
         }

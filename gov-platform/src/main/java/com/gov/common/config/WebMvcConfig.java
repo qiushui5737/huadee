@@ -14,6 +14,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/v1/suggestion/**")
                 .addPathPatterns("/api/v1/complaint/**")
                 .addPathPatterns("/api/v1/collection/**")
-                .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register");
+                .addPathPatterns("/api/v1/service/catalog/my-items", "/api/v1/service/catalog/items/**")
+                .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register", "/api/v1/service/catalog/categories", "/api/v1/service/catalog/items");
     }
 }

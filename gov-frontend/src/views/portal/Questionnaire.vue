@@ -1,156 +1,217 @@
 <template>
   <div class="questionnaire-page">
     <div class="page-header">
-      <h1>民意调查</h1>
-      <p class="subtitle">您的意见对我们很重要</p>
+      <div class="header-content">
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item><a href="/">首页</a></el-breadcrumb-item>
+          <el-breadcrumb-item>问卷调查</el-breadcrumb-item>
+        </el-breadcrumb>
+        <h1 class="page-title">问卷调查</h1>
+      </div>
     </div>
 
-    <!-- 问卷列表 -->
-    <div v-if="!currentQ">
-      <el-row :gutter="20">
-        <el-col :span="8" v-for="q in questionnaireList" :key="q.id">
-          <el-card shadow="hover" class="q-card" @click="openQuestionnaire(q.id)">
-            <div class="q-title">{{ q.title }}</div>
-            <div class="q-desc">{{ q.description || '暂无说明' }}</div>
-            <div class="q-meta">
-              <el-tag :type="q.status === '已发布' ? 'success' : 'info'" size="small">{{ q.status }}</el-tag>
-              <span class="q-count">{{ q.totalAnswers }} 人参与</span>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-      <el-empty v-if="questionnaireList.length === 0" description="暂无问卷" />
-    </div>
-
-    <!-- 问卷填写 -->
-    <div v-else>
-      <el-card shadow="hover">
+    <div class="page-content">
+      <el-card shadow="hover" class="question-card">
         <template #header>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>{{ currentQ.title }}</span>
-            <el-button @click="currentQ = null" size="small">返回列表</el-button>
+          <div class="card-header">
+            <el-icon><List /></el-icon>
+            <span>满意度调查</span>
           </div>
         </template>
 
-        <p style="color: #666; margin-bottom: 20px;">{{ currentQ.description }}</p>
-
-        <el-form ref="answerFormRef" label-position="top">
-          <div v-for="(q, idx) in currentQ.questions" :key="q.id" class="question-item">
-            <div class="question-text">
-              <span class="q-num">{{ idx + 1 }}.</span>
-              {{ q.questionText }}
-              <el-tag v-if="q.required" type="danger" size="small" style="margin-left: 5px;">必答</el-tag>
-            </div>
-
-            <!-- 单选 -->
-            <el-radio-group v-if="q.questionType === 'single'" v-model="answers[q.id]" class="answer-options">
-              <el-radio v-for="opt in q.options" :key="opt" :value="opt" style="display: block; margin: 8px 0;">{{ opt }}</el-radio>
+        <el-form ref="formRef" :model="formData" label-width="0" :rules="formRules">
+          <div class="question-item">
+            <h3>1. 您对政务服务的整体满意度如何？</h3>
+            <el-radio-group v-model="formData.q1">
+              <el-radio value="very_satisfied">非常满意</el-radio>
+              <el-radio value="satisfied">满意</el-radio>
+              <el-radio value="general">一般</el-radio>
+              <el-radio value="dissatisfied">不满意</el-radio>
             </el-radio-group>
+          </div>
 
-            <!-- 多选 -->
-            <el-checkbox-group v-if="q.questionType === 'multiple'" v-model="answers[q.id]" class="answer-options">
-              <el-checkbox v-for="opt in q.options" :key="opt" :value="opt" style="display: block; margin: 8px 0;">{{ opt }}</el-checkbox>
-            </el-checkbox-group>
+          <div class="question-item">
+            <h3>2. 您对办事效率的评价？</h3>
+            <el-radio-group v-model="formData.q2">
+              <el-radio value="very_satisfied">非常满意</el-radio>
+              <el-radio value="satisfied">满意</el-radio>
+              <el-radio value="general">一般</el-radio>
+              <el-radio value="dissatisfied">不满意</el-radio>
+            </el-radio-group>
+          </div>
 
-            <!-- 文本 -->
-            <el-input v-if="q.questionType === 'text'" v-model="answers[q.id]" type="textarea" :rows="3" placeholder="请输入您的回答..." />
+          <div class="question-item">
+            <h3>3. 您对工作人员服务态度的评价？</h3>
+            <el-radio-group v-model="formData.q3">
+              <el-radio value="very_satisfied">非常满意</el-radio>
+              <el-radio value="satisfied">满意</el-radio>
+              <el-radio value="general">一般</el-radio>
+              <el-radio value="dissatisfied">不满意</el-radio>
+            </el-radio-group>
+          </div>
+
+          <div class="question-item">
+            <h3>4. 您对网站界面的评价？</h3>
+            <el-radio-group v-model="formData.q4">
+              <el-radio value="very_satisfied">非常满意</el-radio>
+              <el-radio value="satisfied">满意</el-radio>
+              <el-radio value="general">一般</el-radio>
+              <el-radio value="dissatisfied">不满意</el-radio>
+            </el-radio-group>
+          </div>
+
+          <div class="question-item">
+            <h3>5. 您的其他建议（选填）</h3>
+            <el-input v-model="formData.suggestion" type="textarea" :rows="4" placeholder="请输入您的建议..." />
+          </div>
+
+          <div class="form-actions">
+            <el-button @click="handleCancel">
+              <el-icon><ArrowLeft /></el-icon> 返回
+            </el-button>
+            <el-button type="primary" @click="handleSubmit" :loading="submitting">
+              <el-icon><Check /></el-icon> 提交问卷
+            </el-button>
           </div>
         </el-form>
-
-        <el-divider />
-
-        <el-form label-width="80px">
-          <el-form-item label="姓名">
-            <el-input v-model="answerUser.userName" placeholder="请输入姓名（选填）" style="width: 200px;" />
-          </el-form-item>
-          <el-form-item label="联系电话">
-            <el-input v-model="answerUser.phone" placeholder="请输入电话（选填）" style="width: 200px;" />
-          </el-form-item>
-        </el-form>
-
-        <el-button type="primary" :loading="submitting" @click="submitAnswer" style="margin-top: 10px;">提交问卷</el-button>
       </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { List, ArrowLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { questionnaireList as fetchQList, questionnaireDetail, submitQuestionnaire } from '@/api/interaction'
 
-const questionnaireList = ref<any[]>([])
-const currentQ = ref<any>(null)
-const answers = ref<Record<number, any>>({})
-const answerUser = reactive({ userName: '', phone: '' })
+const router = useRouter()
+const formRef = ref()
 const submitting = ref(false)
 
-const loadList = async () => {
-  try {
-    const res: any = await fetchQList({ status: '已发布', page: 1, size: 20 })
-    if (res.code === 200) {
-      questionnaireList.value = res.data.records
-    }
-  } catch (e) { /* ignore */ }
+const formData = reactive({
+  q1: '',
+  q2: '',
+  q3: '',
+  q4: '',
+  suggestion: ''
+})
+
+const formRules = {
+  q1: [
+    { required: true, message: '请选择您的评价', trigger: 'change' }
+  ],
+  q2: [
+    { required: true, message: '请选择您的评价', trigger: 'change' }
+  ],
+  q3: [
+    { required: true, message: '请选择您的评价', trigger: 'change' }
+  ],
+  q4: [
+    { required: true, message: '请选择您的评价', trigger: 'change' }
+  ]
 }
 
-const openQuestionnaire = async (id: number) => {
-  try {
-    const res: any = await questionnaireDetail(id)
-    if (res.code === 200) {
-      currentQ.value = res.data
-      answers.value = {}
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  
+  await formRef.value.validate(async (valid: boolean) => {
+    if (!valid) return
+    
+    submitting.value = true
+    
+    try {
+      ElMessage.success('问卷提交成功，感谢您的参与')
+      setTimeout(() => {
+        router.push('/')
+      }, 1500)
+    } catch (error) {
+      ElMessage.error('提交失败，请稍后重试')
+    } finally {
+      submitting.value = false
     }
-  } catch (e) {
-    ElMessage.error('加载问卷失败')
-  }
+  })
 }
 
-const submitAnswer = async () => {
-  submitting.value = true
-  try {
-    const payload = {
-      userName: answerUser.userName,
-      phone: answerUser.phone,
-      answers: currentQ.value.questions.map((q: any) => ({
-        questionId: q.id,
-        answerText: q.questionType === 'text' ? (answers.value[q.id] || '') : undefined,
-        answerOptions: q.questionType !== 'text' ? (Array.isArray(answers.value[q.id]) ? answers.value[q.id] : answers.value[q.id] ? [answers.value[q.id]] : []) : undefined
-      }))
-    }
-    const res: any = await submitQuestionnaire(currentQ.value.id, payload)
-    if (res.code === 200) {
-      ElMessage.success('提交成功，感谢您的参与！')
-      currentQ.value = null
-      loadList()
-    }
-  } catch (e) {
-    ElMessage.error('提交失败')
-  } finally {
-    submitting.value = false
-  }
+const handleCancel = () => {
+  router.push('/')
 }
-
-onMounted(loadList)
 </script>
 
-<style scoped lang="scss">
-.questionnaire-page { max-width: 1200px; margin: 0 auto; padding: 20px; }
-.page-header { text-align: center; margin-bottom: 30px;
-  h1 { font-size: 28px; color: #1a3a5c; margin: 0; }
-  .subtitle { color: #888; margin-top: 8px; font-size: 14px; }
+<style scoped>
+.questionnaire-page {
+  min-height: calc(100vh - 100px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
 }
-.q-card { cursor: pointer; margin-bottom: 20px; transition: transform 0.2s;
-  &:hover { transform: translateY(-2px); }
-  .q-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #333; }
-  .q-desc { font-size: 13px; color: #888; margin-bottom: 12px; height: 36px; overflow: hidden; }
-  .q-meta { display: flex; justify-content: space-between; align-items: center;
-    .q-count { font-size: 12px; color: #999; }
-  }
+
+.page-header {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  padding: 30px 40px;
+  color: #fff;
 }
-.question-item { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0;
-  .question-text { font-size: 15px; font-weight: 500; margin-bottom: 12px;
-    .q-num { color: #409eff; margin-right: 4px; }
-  }
+
+.header-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.page-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 30px 40px;
+}
+
+.question-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.question-item {
+  margin: 30px 0;
+  padding-bottom: 20px;
+  border-bottom: 1px dashed #e8e8e8;
+}
+
+.question-item:last-child {
+  border-bottom: none;
+}
+
+.question-item h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+:deep(.el-radio) {
+  margin-right: 24px;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 8px;
 }
 </style>

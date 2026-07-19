@@ -37,6 +37,19 @@ public class AdminController {
         return Result.success(authService.userInfo(token));
     }
 
+    @PutMapping("/auth/profile")
+    public Result<Map<String,Object>> updateProfile(@RequestAttribute("jwtToken") String token,
+                                                    @RequestBody Map<String,String> body) {
+        return Result.success(authService.updateProfile(token, body), "个人资料已更新");
+    }
+
+    @PutMapping("/auth/password")
+    public Result<Void> changePassword(@RequestAttribute("jwtToken") String token,
+                                       @RequestBody Map<String,String> body) {
+        authService.changePassword(token, body);
+        return Result.success(null, "密码修改成功，请重新登录");
+    }
+
     @PostMapping("/auth/logout")
     public Result<Void> logout(@RequestAttribute("jwtToken") String token) {
         authService.logout(token);

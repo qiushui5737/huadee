@@ -18,6 +18,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'search', name: 'search', component: () => import('@/views/portal/Search.vue') },
       { path: 'chat', name: 'chat', component: () => import('@/views/portal/Chat.vue') },
       { path: 'service', name: 'service', component: () => import('@/views/portal/Service.vue') },
+      { path: 'service/apply', name: 'service-apply', component: () => import('@/views/portal/ServiceApply.vue') },
       { path: 'interaction', name: 'interaction', component: () => import('@/views/portal/Interaction.vue') },
       { path: 'interaction/letters', name: 'public-letters', component: () => import('@/views/portal/PublicLetters.vue') },
       { path: 'interaction/collection', name: 'collection-list', component: () => import('@/views/portal/CollectionList.vue') },
@@ -35,6 +36,16 @@ const routes: RouteRecordRaw[] = [
       { path: 'dept', name: 'dept', component: () => import('@/views/portal/Dept.vue') },
       { path: 'profile', name: 'profile', component: () => import('@/views/portal/Profile.vue'), meta: { requiresPortalAuth: true } }
     ]
+  },
+  {
+    path: '/login',
+    name: 'portal-login',
+    component: () => import('@/views/admin/Login.vue')
+  },
+  {
+    path: '/register',
+    name: 'portal-register',
+    component: () => import('@/views/admin/Register.vue')
   },
   // ===== B端 政府管理端(隔离入口) =====
   {
@@ -56,6 +67,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'stats', name: 'admin-stats', component: () => import('@/views/admin/Stats.vue') },
       { path: 'interaction', name: 'admin-interaction', component: () => import('@/views/admin/InteractionMgmt.vue') },
       { path: 'service', name: 'admin-service', component: () => import('@/views/admin/ServiceApproval.vue') },
+      { path: 'service-mgmt', name: 'admin-service-mgmt', component: () => import('@/views/admin/ServiceMgmt.vue') },
       { path: 'disclosure', name: 'admin-disclosure', component: () => import('@/views/admin/DisclosureAudit.vue') },
       { path: 'questionnaire', name: 'admin-questionnaire', component: () => import('@/views/admin/QuestionnaireMgmt.vue') },
       { path: 'consultation', name: 'admin-consultation', component: () => import('@/views/admin/ConsultationMgmt.vue') },
@@ -63,6 +75,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'complaint', name: 'admin-complaint', component: () => import('@/views/admin/ComplaintMgmt.vue') },
       { path: 'collection', name: 'admin-collection', component: () => import('@/views/admin/CollectionMgmt.vue') },
       { path: 'cms', name: 'admin-cms', component: () => import('@/views/admin/ContentMgmt.vue') },
+      { path: 'ai', name: 'admin-ai', component: () => import('@/views/admin/AiAudit.vue') },
       { path: 'performance', name: 'admin-performance', component: () => import('@/views/admin/Performance.vue') },
       { path: 'system', name: 'admin-system', component: () => import('@/views/admin/System.vue') }
     ]
@@ -82,15 +95,29 @@ router.beforeEach(async (to, _from, next) => {
       next({ name: 'admin-login' })
     } else {
       try {
-        await useUserStore().restoreSession()
+        await useUserStore().restoreSession('admin')
         next()
       } catch {
-        useUserStore().logout()
+        useUserStore().clearSession('admin')
         next({ name: 'admin-login' })
+      }
+    }
+  } else if (to.meta.requiresPortalAuth) {
+    if (!localStorage.getItem('c_token')) {
+      next({ name: 'portal-login', query: { redirect: to.fullPath } })
+    } else {
+      try {
+        await useUserStore().restoreSession('portal')
+        next()
+      } catch {
+        useUserStore().clearSession('portal')
+        next({ name: 'portal-login' })
       }
     }
   } else if ((to.name === 'admin-login' || to.name === 'admin-register') && localStorage.getItem('admin_token')) {
     next({ name: 'admin-dashboard' })
+  } else if ((to.name === 'portal-login' || to.name === 'portal-register') && localStorage.getItem('c_token')) {
+    next({ name: 'home' })
   } else {
     next()
   }

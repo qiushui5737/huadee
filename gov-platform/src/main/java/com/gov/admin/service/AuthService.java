@@ -108,12 +108,71 @@ public class AuthService {
             throw BusinessException.of(401, "登录状态已失效");
         return userData(user, userMapper.selectRoleCodes(user.getId()));
     }
+
+    @Transactional
+    public Map<String, Object> updateProfile(String token, Map<String, String> body) {
+        SysUser user = currentUser(token);
+        String realName = body.get("realName");
+        String gender = body.get("gender");
+        String phone = body.get("phone");
+        String email = body.get("email");
+        String address = body.get("address");
+        if (isBlank(realName) || isBlank(gender) || isBlank(phone) || isBlank(email) || isBlank(address))
+            throw BusinessException.of(400, "请完整填写个人资料");
+        if (!List.of("男", "女", "其他").contains(gender))
+            throw BusinessException.of(400, "性别选项无效");
+        if (!phone.matches("^1[0-9]{10}$"))
+            throw BusinessException.of(400, "请输入有效的手机号");
+        if (!email.matches("^[^@ ]+@[^@ ]+[.][^@ ]+$"))
+            throw BusinessException.of(400, "请输入有效的邮箱地址");
+        user.setRealName(realName.trim());
+        user.setGender(gender);
+        user.setPhone(phone.trim());
+        user.setEmail(email.trim());
+        user.setAddress(address.trim());
+        userMapper.updateById(user);
+        return userData(user, userMapper.selectRoleCodes(user.getId()));
+    }
+
+    @Transactional
+    public void changePassword(String token, Map<String, String> body) {
+        SysUser user = currentUser(token);
+        String oldPassword = body.get("oldPassword");
+        String newPassword = body.get("newPassword");
+        String confirmPassword = body.get("confirmPassword");
+        if (isBlank(oldPassword) || isBlank(newPassword) || isBlank(confirmPassword))
+            throw BusinessException.of(400, "请完整填写密码信息");
+        if (!passwordEncoder.matches(oldPassword, user.getPassword()))
+            throw BusinessException.of(400, "原密码不正确");
+        if (newPassword.length() < 8
+                || !newPassword.matches(".*[A-Za-z].*")
+                || !newPassword.matches(".*[0-9].*"))
+            throw BusinessException.of(400, "新密码至少8位，且必须包含字母和数字");
+        if (!newPassword.equals(confirmPassword))
+            throw BusinessException.of(400, "两次输入的新密码不一致");
+        if (passwordEncoder.matches(newPassword, user.getPassword()))
+            throw BusinessException.of(400, "新密码不能与原密码相同");
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+        tokenSessionService.remove(token);
+    }
+
+    private SysUser currentUser(String token) {
+        Claims claims = JwtUtil.parseToken(token);
+        Number userId = claims.get("userId", Number.class);
+        SysUser user = userMapper.selectById(userId.longValue());
+        if (user == null || !Integer.valueOf(1).equals(user.getStatus()))
+            throw BusinessException.of(401, "登录状态已失效");
+        return user;
+    }
+
     private Map<String,Object> userData(SysUser user, List<String> roles) {
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("id", user.getId()); result.put("username", user.getUsername());
         result.put("realName", user.getRealName()); result.put("deptCode", user.getDeptCode());
         result.put("gender", user.getGender()); result.put("phone", user.getPhone());
-        result.put("email", user.getEmail());
+        result.put("email", user.getEmail()); result.put("idCard", user.getIdCard());
+        result.put("address", user.getAddress());
         result.put("roles", roles); result.put("permissions", roles.contains("ADMIN") ? List.of("*:*") : List.of());
         return result;
     }

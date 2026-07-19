@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="write-letter-page">
-    <!-- 顶部操作栏 -->
+    <!-- 椤堕儴鎿嶄綔鏍?-->
     <div class="top-bar">
       <div class="recipient-row">
-        <span class="label">收件人</span>
+        <span class="label">鏀朵欢浜?/span>
         <el-icon class="add-icon" @click="showDeptSelector"><Plus /></el-icon>
         <div class="recipient-tags">
           <el-tag
@@ -15,77 +15,118 @@
           >
             {{ dept.label }}
           </el-tag>
-          <span v-if="selectedDepts.length === 0" class="placeholder">请选择目标部门</span>
+          <span v-if="selectedDepts.length === 0" class="placeholder">璇烽€夋嫨鐩爣閮ㄩ棬</span>
         </div>
       </div>
       <div class="top-actions">
-        <el-switch v-model="form.isPublic" active-text="公开" inactive-text="私密" style="margin-right: 12px;" />
-        <span class="action-link">抄送</span>
-        <span class="action-link">密送</span>
+        <el-switch v-model="form.isPublic" active-text="鍏紑" inactive-text="绉佸瘑" style="margin-right: 12px;" />
+        <span class="action-link">鎶勯€?/span>
+        <span class="action-link">瀵嗛€?/span>
         <span class="action-divider"></span>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">发送</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">鍙戦€?/el-button>
       </div>
     </div>
 
-    <!-- 主题行 -->
-    <div class="subject-row">
-      <span class="label">主 题</span>
-      <el-input
-        v-model="form.title"
-        placeholder="请输入信件标题"
-        class="subject-input"
-        maxlength="50"
-        show-word-limit
-      />
+    <div class="page-content">
+      <el-card shadow="hover" class="letter-card">
+        <template #header>
+          <div class="card-header">
+            <el-icon><MessageSquare /></el-icon>
+            <span>濉啓淇¤淇℃伅</span>
+          </div>
+        </template>
+
+        <el-form ref="formRef" :model="formData" label-width="120px" :rules="formRules">
+          <el-form-item label="鏉ヤ俊绫诲瀷" prop="type">
+            <el-select v-model="formData.type" placeholder="璇烽€夋嫨鏉ヤ俊绫诲瀷">
+              <el-option label="鎶曡瘔寤鸿" value="complaint" />
+              <el-option label="鍜ㄨ姹傚姪" value="consult" />
+              <el-option label="鎰忚鍙嶉" value="feedback" />
+              <el-option label="鍏朵粬" value="other" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="涓婚" prop="title">
+            <el-input v-model="formData.title" placeholder="璇疯緭鍏ユ潵淇′富棰? />
+          </el-form-item>
+
+          <el-form-item label="濮撳悕" prop="name">
+            <el-input v-model="formData.name" placeholder="璇疯緭鍏ユ偍鐨勫鍚? />
+          </el-form-item>
+
+          <el-form-item label="鑱旂郴鐢佃瘽" prop="phone">
+            <el-input v-model="formData.phone" placeholder="璇疯緭鍏ヨ仈绯荤數璇? />
+          </el-form-item>
+
+          <el-form-item label="鐢靛瓙閭">
+            <el-input v-model="formData.email" placeholder="璇疯緭鍏ョ數瀛愰偖绠憋紙閫夊～锛? />
+          </el-form-item>
+
+          <el-form-item label="鏉ヤ俊鍐呭" prop="content">
+            <el-input v-model="formData.content" type="textarea" :rows="6" placeholder="璇疯缁嗘弿杩版偍鐨勮瘔姹?.." />
+          </el-form-item>
+
+          <el-form-item>
+            <div class="form-actions">
+              <el-button @click="handleCancel">
+                <el-icon><ArrowLeft /></el-icon> 杩斿洖
+              </el-button>
+              <el-button type="primary" @click="handleSubmit" :loading="submitting">
+                <el-icon><Send /></el-icon> 鎻愪氦鏉ヤ俊
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </el-card>
     </div>
 
-    <!-- 工具栏 -->
+    <!-- 宸ュ叿鏍?-->
     <div class="toolbar">
       <div class="toolbar-row">
         <div class="toolbar-group">
-          <button class="tool-btn" @click="execCmd('undo')" title="撤销">
+          <button class="tool-btn" @click="execCmd('undo')" title="鎾ら攢">
             <el-icon><RefreshLeft /></el-icon>
           </button>
-          <button class="tool-btn" @click="execCmd('redo')" title="重做">
+          <button class="tool-btn" @click="execCmd('redo')" title="閲嶅仛">
             <el-icon><RefreshRight /></el-icon>
           </button>
         </div>
         <div class="toolbar-group">
-          <button class="tool-btn" @click="insertImage" title="图片">
+          <button class="tool-btn" @click="insertImage" title="鍥剧墖">
             <el-icon><Picture /></el-icon>
-            <span>图片</span>
+            <span>鍥剧墖</span>
           </button>
           <el-dropdown trigger="click" @command="handleInsert">
             <button class="tool-btn">
               <el-icon><CirclePlus /></el-icon>
-              <span>插入</span>
+              <span>鎻掑叆</span>
               <el-icon class="arrow"><ArrowDown /></el-icon>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="table">表格</el-dropdown-item>
-                <el-dropdown-item command="link">链接</el-dropdown-item>
-                <el-dropdown-item command="file">附件</el-dropdown-item>
+                <el-dropdown-item command="table">琛ㄦ牸</el-dropdown-item>
+                <el-dropdown-item command="link">閾炬帴</el-dropdown-item>
+                <el-dropdown-item command="file">闄勪欢</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <button class="tool-btn" title="导入文档">
+          <button class="tool-btn" title="瀵煎叆鏂囨。">
             <el-icon><Document /></el-icon>
-            <span>导入文档</span>
+            <span>瀵煎叆鏂囨。</span>
             <el-icon class="arrow"><ArrowDown /></el-icon>
           </button>
-          <button class="tool-btn" title="日程">
+          <button class="tool-btn" title="鏃ョ▼">
             <el-icon><Calendar /></el-icon>
-            <span>日程</span>
+            <span>鏃ョ▼</span>
           </button>
-          <button class="tool-btn" title="表情">
+          <button class="tool-btn" title="琛ㄦ儏">
             <el-icon><ChatLineRound /></el-icon>
-            <span>表情</span>
+            <span>琛ㄦ儏</span>
           </button>
         </div>
         <div class="toolbar-group format-group">
-          <button class="tool-btn active" title="格式">
-            <span class="format-text">Aa 格式</span>
+          <button class="tool-btn active" title="鏍煎紡">
+            <span class="format-text">Aa 鏍煎紡</span>
             <el-icon class="arrow"><ArrowUp /></el-icon>
           </button>
         </div>
@@ -93,129 +134,129 @@
           <el-dropdown trigger="click">
             <button class="tool-btn">
               <el-icon><EditPen /></el-icon>
-              <span>签名</span>
+              <span>绛惧悕</span>
               <el-icon class="arrow"><ArrowDown /></el-icon>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item>默认签名</el-dropdown-item>
-                <el-dropdown-item>管理签名</el-dropdown-item>
+                <el-dropdown-item>榛樿绛惧悕</el-dropdown-item>
+                <el-dropdown-item>绠＄悊绛惧悕</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <button class="tool-btn" title="更多">
+          <button class="tool-btn" title="鏇村">
             <el-icon><MoreFilled /></el-icon>
           </button>
         </div>
       </div>
 
-      <!-- 格式工具栏 -->
+      <!-- 鏍煎紡宸ュ叿鏍?-->
       <div class="format-toolbar" v-if="showFormatToolbar">
         <div class="toolbar-group">
-          <button class="tool-btn-sm" title="清除格式">
+          <button class="tool-btn-sm" title="娓呴櫎鏍煎紡">
             <el-icon><Brush /></el-icon>
           </button>
-          <button class="tool-btn-sm" title="清除样式">
+          <button class="tool-btn-sm" title="娓呴櫎鏍峰紡">
             <el-icon><Brush /></el-icon>
           </button>
         </div>
         <div class="toolbar-group">
           <el-dropdown trigger="click" @command="handleFont">
-            <button class="tool-btn-sm">默认字体 <el-icon class="arrow"><ArrowDown /></el-icon></button>
+            <button class="tool-btn-sm">榛樿瀛椾綋 <el-icon class="arrow"><ArrowDown /></el-icon></button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="宋体">宋体</el-dropdown-item>
-                <el-dropdown-item command="微软雅黑">微软雅黑</el-dropdown-item>
-                <el-dropdown-item command="黑体">黑体</el-dropdown-item>
-                <el-dropdown-item command="楷体">楷体</el-dropdown-item>
+                <el-dropdown-item command="瀹嬩綋">瀹嬩綋</el-dropdown-item>
+                <el-dropdown-item command="寰蒋闆呴粦">寰蒋闆呴粦</el-dropdown-item>
+                <el-dropdown-item command="榛戜綋">榛戜綋</el-dropdown-item>
+                <el-dropdown-item command="妤蜂綋">妤蜂綋</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
           <el-dropdown trigger="click" @command="handleFontSize">
-            <button class="tool-btn-sm">字号 <el-icon class="arrow"><ArrowDown /></el-icon></button>
+            <button class="tool-btn-sm">瀛楀彿 <el-icon class="arrow"><ArrowDown /></el-icon></button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="1">小</el-dropdown-item>
-                <el-dropdown-item command="3">正常</el-dropdown-item>
-                <el-dropdown-item command="5">大</el-dropdown-item>
-                <el-dropdown-item command="7">特大</el-dropdown-item>
+                <el-dropdown-item command="1">灏?/el-dropdown-item>
+                <el-dropdown-item command="3">姝ｅ父</el-dropdown-item>
+                <el-dropdown-item command="5">澶?/el-dropdown-item>
+                <el-dropdown-item command="7">鐗瑰ぇ</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
         <div class="toolbar-group">
-          <button class="tool-btn-sm" @click="execCmd('bold')" title="加粗"><strong>B</strong></button>
-          <button class="tool-btn-sm" @click="execCmd('italic')" title="斜体"><em>I</em></button>
-          <button class="tool-btn-sm" @click="execCmd('underline')" title="下划线"><u>U</u></button>
-          <button class="tool-btn-sm" @click="execCmd('strikeThrough')" title="删除线"><s>S</s></button>
+          <button class="tool-btn-sm" @click="execCmd('bold')" title="鍔犵矖"><strong>B</strong></button>
+          <button class="tool-btn-sm" @click="execCmd('italic')" title="鏂滀綋"><em>I</em></button>
+          <button class="tool-btn-sm" @click="execCmd('underline')" title="涓嬪垝绾?><u>U</u></button>
+          <button class="tool-btn-sm" @click="execCmd('strikeThrough')" title="鍒犻櫎绾?><s>S</s></button>
         </div>
         <div class="toolbar-group">
           <el-dropdown trigger="click" @command="(cmd: string) => execCmdArg('foreColor', cmd)">
-            <button class="tool-btn-sm" title="字体颜色">
+            <button class="tool-btn-sm" title="瀛椾綋棰滆壊">
               <span class="color-indicator" style="border-bottom: 2px solid #f56c6c;">A</span>
               <el-icon class="arrow"><ArrowDown /></el-icon>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="#000000">黑色</el-dropdown-item>
-                <el-dropdown-item command="#f56c6c">红色</el-dropdown-item>
-                <el-dropdown-item command="#409eff">蓝色</el-dropdown-item>
-                <el-dropdown-item command="#67c23a">绿色</el-dropdown-item>
+                <el-dropdown-item command="#000000">榛戣壊</el-dropdown-item>
+                <el-dropdown-item command="#f56c6c">绾㈣壊</el-dropdown-item>
+                <el-dropdown-item command="#409eff">钃濊壊</el-dropdown-item>
+                <el-dropdown-item command="#67c23a">缁胯壊</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
           <el-dropdown trigger="click" @command="(cmd: string) => execCmdArg('hiliteColor', cmd)">
-            <button class="tool-btn-sm" title="背景色">
+            <button class="tool-btn-sm" title="鑳屾櫙鑹?>
               <span class="highlight-indicator"></span>
               <el-icon class="arrow"><ArrowDown /></el-icon>
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="#ffff00">黄色</el-dropdown-item>
-                <el-dropdown-item command="#00ff00">绿色</el-dropdown-item>
-                <el-dropdown-item command="#00ffff">青色</el-dropdown-item>
-                <el-dropdown-item command="transparent">无</el-dropdown-item>
+                <el-dropdown-item command="#ffff00">榛勮壊</el-dropdown-item>
+                <el-dropdown-item command="#00ff00">缁胯壊</el-dropdown-item>
+                <el-dropdown-item command="#00ffff">闈掕壊</el-dropdown-item>
+                <el-dropdown-item command="transparent">鏃?/el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
         <div class="toolbar-group">
-          <button class="tool-btn-sm" @click="execCmd('insertUnorderedList')" title="无序列表">
+          <button class="tool-btn-sm" @click="execCmd('insertUnorderedList')" title="鏃犲簭鍒楄〃">
             <el-icon><List /></el-icon>
           </button>
-          <button class="tool-btn-sm" @click="execCmd('insertOrderedList')" title="有序列表">
+          <button class="tool-btn-sm" @click="execCmd('insertOrderedList')" title="鏈夊簭鍒楄〃">
             <el-icon><Sort /></el-icon>
           </button>
-          <button class="tool-btn-sm" @click="execCmd('indent')" title="增加缩进">
+          <button class="tool-btn-sm" @click="execCmd('indent')" title="澧炲姞缂╄繘">
             <el-icon><DArrowRight /></el-icon>
           </button>
-          <button class="tool-btn-sm" @click="execCmd('outdent')" title="减少缩进">
+          <button class="tool-btn-sm" @click="execCmd('outdent')" title="鍑忓皯缂╄繘">
             <el-icon><DArrowLeft /></el-icon>
           </button>
         </div>
         <div class="toolbar-group">
-          <button class="tool-btn-sm" @click="execCmd('justifyLeft')" title="左对齐">
+          <button class="tool-btn-sm" @click="execCmd('justifyLeft')" title="宸﹀榻?>
             <el-icon><Menu /></el-icon>
           </button>
-          <button class="tool-btn-sm" @click="execCmd('justifyCenter')" title="居中">
+          <button class="tool-btn-sm" @click="execCmd('justifyCenter')" title="灞呬腑">
             <el-icon><Grid /></el-icon>
           </button>
-          <button class="tool-btn-sm" @click="execCmd('justifyRight')" title="右对齐">
+          <button class="tool-btn-sm" @click="execCmd('justifyRight')" title="鍙冲榻?>
             <el-icon><Fold /></el-icon>
           </button>
         </div>
         <div class="toolbar-group">
-          <button class="tool-btn-sm" @click="execCmd('formatBlock', 'blockquote')" title="引用">
-            <span class="quote-icon">❝</span>
+          <button class="tool-btn-sm" @click="execCmd('formatBlock', 'blockquote')" title="寮曠敤">
+            <span class="quote-icon">鉂?/span>
           </button>
-          <button class="tool-btn-sm" @click="insertCode" title="代码">
+          <button class="tool-btn-sm" @click="insertCode" title="浠ｇ爜">
             <span class="code-icon">&lt;/&gt;</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 正文编辑区 -->
+    <!-- 姝ｆ枃缂栬緫鍖?-->
     <div class="editor-container">
       <div
         ref="editorRef"
@@ -224,11 +265,11 @@
         @compositionstart="isComposing = true"
         @compositionend="onCompositionEnd"
         @blur="syncContent"
-        placeholder="输入正文"
+        placeholder="杈撳叆姝ｆ枃"
       ></div>
     </div>
 
-    <!-- 底部用户信息 -->
+    <!-- 搴曢儴鐢ㄦ埛淇℃伅 -->
     <div class="user-info">
       <div class="user-avatar">
         <el-avatar :size="40" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
@@ -239,79 +280,67 @@
       </div>
     </div>
 
-    <!-- 部门选择弹窗 -->
-    <el-dialog v-model="deptSelectorVisible" title="选择目标部门" width="500px">
-      <el-select v-model="tempDept" placeholder="请选择部门" style="width: 100%">
-        <el-option label="省政府办公厅" value="GOV" />
-        <el-option label="教育厅" value="EDU" />
-        <el-option label="卫健委" value="HEA" />
-        <el-option label="住建厅" value="HOU" />
-        <el-option label="人社厅" value="SOC" />
-        <el-option label="公安厅" value="POL" />
-        <el-option label="财政厅" value="FIN" />
-        <el-option label="交通厅" value="TRA" />
+    <!-- 閮ㄩ棬閫夋嫨寮圭獥 -->
+    <el-dialog v-model="deptSelectorVisible" title="閫夋嫨鐩爣閮ㄩ棬" width="500px">
+      <el-select v-model="tempDept" placeholder="璇烽€夋嫨閮ㄩ棬" style="width: 100%">
+        <el-option label="鐪佹斂搴滃姙鍏巺" value="GOV" />
+        <el-option label="鏁欒偛鍘? value="EDU" />
+        <el-option label="鍗仴濮? value="HEA" />
+        <el-option label="浣忓缓鍘? value="HOU" />
+        <el-option label="浜虹ぞ鍘? value="SOC" />
+        <el-option label="鍏畨鍘? value="POL" />
+        <el-option label="璐㈡斂鍘? value="FIN" />
+        <el-option label="浜ら€氬巺" value="TRA" />
       </el-select>
       <template #footer>
-        <el-button @click="deptSelectorVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmDept">确定</el-button>
+        <el-button @click="deptSelectorVisible = false">鍙栨秷</el-button>
+        <el-button type="primary" @click="confirmDept">纭畾</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { MessageSquare, ArrowLeft, Send } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import {
-  Plus, RefreshLeft, RefreshRight, Picture, CirclePlus, Document, Calendar,
-  EditPen, MoreFilled, ArrowDown, ArrowUp, Brush, List, Sort,
-  ChatLineRound, DArrowRight, DArrowLeft, Menu, Grid, Fold
-} from '@element-plus/icons-vue'
-import { submitMessage } from '@/api/interaction'
 
 const router = useRouter()
-const editorRef = ref<HTMLElement>()
+const formRef = ref()
 const submitting = ref(false)
 const showFormatToolbar = ref(true)
 const deptSelectorVisible = ref(false)
 const tempDept = ref('')
 const isComposing = ref(false)
 
-// 部门选项
-const deptOptions: Record<string, string> = {
-  GOV: '省政府办公厅',
-  EDU: '教育厅',
-  HEA: '卫健委',
-  HOU: '住建厅',
-  SOC: '人社厅',
-  POL: '公安厅',
-  FIN: '财政厅',
-  TRA: '交通厅'
-}
-
-const selectedDepts = ref<{ label: string; value: string }[]>([])
-
-// 表单
-const form = reactive({
+const formData = reactive({
+  type: '',
   title: '',
   content: '',
   contactName: '',
   targetDept: '',
-  type: '咨询',
+  type: '鍜ㄨ',
   isPublic: true
 })
 
-// 用户信息（从localStorage或store获取）
-const userInfo = reactive({
-  name: localStorage.getItem('user_name') || '市民用户',
-  email: localStorage.getItem('user_email') || 'user@gov.cn'
-})
-
-// 显示部门选择器
-const showDeptSelector = () => {
-  tempDept.value = ''
-  deptSelectorVisible.value = true
+const formRules = {
+  type: [
+    { required: true, message: '璇烽€夋嫨鏉ヤ俊绫诲瀷', trigger: 'change' }
+  ],
+  title: [
+    { required: true, message: '璇疯緭鍏ユ潵淇′富棰?, trigger: 'blur' }
+  ],
+  name: [
+    { required: true, message: '璇疯緭鍏ュ鍚?, trigger: 'blur' }
+  ],
+  phone: [
+    { required: true, message: '璇疯緭鍏ヨ仈绯荤數璇?, trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '璇疯緭鍏ユ纭殑鎵嬫満鍙?, trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '璇疯緭鍏ユ潵淇″唴瀹?, trigger: 'blur' }
+  ]
 }
 
 const confirmDept = () => {
@@ -332,7 +361,7 @@ const removeDept = (value: string) => {
   form.targetDept = selectedDepts.value.map(d => d.value).join(',')
 }
 
-// 富文本命令
+// 瀵屾枃鏈懡浠?
 const execCmd = (command: string, value?: string) => {
   document.execCommand(command, false, value)
   editorRef.value?.focus()
@@ -354,14 +383,14 @@ const handleFontSize = (size: string) => {
 }
 
 const insertImage = () => {
-  const url = prompt('请输入图片URL：')
+  const url = prompt('璇疯緭鍏ュ浘鐗嘦RL锛?)
   if (url) {
     document.execCommand('insertImage', false, url)
   }
 }
 
 const insertCode = () => {
-  const code = prompt('请输入代码：')
+  const code = prompt('璇疯緭鍏ヤ唬鐮侊細')
   if (code) {
     document.execCommand('insertHTML', false, `<pre style="background:#f5f5f5;padding:10px;border-radius:4px;font-family:monospace;">${code}</pre><p><br></p>`)
   }
@@ -369,20 +398,20 @@ const insertCode = () => {
 
 const handleInsert = (command: string) => {
   if (command === 'table') {
-    const html = '<table border="1" style="border-collapse:collapse;width:100%;"><tr><td style="border:1px solid #ddd;padding:8px;">单元格1</td><td style="border:1px solid #ddd;padding:8px;">单元格2</td></tr><tr><td style="border:1px solid #ddd;padding:8px;">单元格3</td><td style="border:1px solid #ddd;padding:8px;">单元格4</td></tr></table><p><br></p>'
+    const html = '<table border="1" style="border-collapse:collapse;width:100%;"><tr><td style="border:1px solid #ddd;padding:8px;">鍗曞厓鏍?</td><td style="border:1px solid #ddd;padding:8px;">鍗曞厓鏍?</td></tr><tr><td style="border:1px solid #ddd;padding:8px;">鍗曞厓鏍?</td><td style="border:1px solid #ddd;padding:8px;">鍗曞厓鏍?</td></tr></table><p><br></p>'
     document.execCommand('insertHTML', false, html)
   } else if (command === 'link') {
-    const url = prompt('请输入链接URL：')
+    const url = prompt('璇疯緭鍏ラ摼鎺RL锛?)
     if (url) {
       document.execCommand('createLink', false, url)
     }
   } else if (command === 'file') {
-    ElMessage.info('附件功能开发中')
+    ElMessage.info('闄勪欢鍔熻兘寮€鍙戜腑')
   }
   editorRef.value?.focus()
 }
 
-// 输入处理：仅在失焦时同步，避免响应式更新干扰 contenteditable 光标
+// 杈撳叆澶勭悊锛氫粎鍦ㄥけ鐒︽椂鍚屾锛岄伩鍏嶅搷搴斿紡鏇存柊骞叉壈 contenteditable 鍏夋爣
 const syncContent = () => {
   if (editorRef.value) {
     form.content = editorRef.value.innerHTML
@@ -393,16 +422,16 @@ const onCompositionEnd = () => {
   isComposing.value = false
 }
 
-// 提交
+// 鎻愪氦
 const handleSubmit = async () => {
-  // 先同步编辑器内容（点击按钮时编辑器可能未失焦）
+  // 鍏堝悓姝ョ紪杈戝櫒鍐呭锛堢偣鍑绘寜閽椂缂栬緫鍣ㄥ彲鑳芥湭澶辩劍锛?
   syncContent()
   if (!form.title.trim()) {
-    ElMessage.warning('请输入信件标题')
+    ElMessage.warning('璇疯緭鍏ヤ俊浠舵爣棰?)
     return
   }
   if (!editorRef.value || !editorRef.value.innerText.trim()) {
-    ElMessage.warning('请输入信件内容')
+    ElMessage.warning('璇疯緭鍏ヤ俊浠跺唴瀹?)
     return
   }
 
@@ -414,326 +443,80 @@ const handleSubmit = async () => {
     })
     if (res.code === 200) {
       const consultNo = res.data?.consultNo || ''
-      ElMessage.success(`信件发送成功！信件单号：${consultNo}`)
+      ElMessage.success(`淇′欢鍙戦€佹垚鍔燂紒淇′欢鍗曞彿锛?{consultNo}`)
       router.push('/interaction')
     } else {
-      ElMessage.error(res.message || '发送失败')
+      ElMessage.error(res.message || '鍙戦€佸け璐?)
     }
-  } catch (e) {
-    ElMessage.error('网络异常，请重试')
+  } catch (error) {
+    ElMessage.error('鎻愪氦澶辫触锛岃绋嶅悗閲嶈瘯')
   } finally {
     submitting.value = false
   }
 }
 
-onMounted(() => {
-  // 设置默认签名
-  if (editorRef.value) {
-    editorRef.value.innerHTML = `<p>此致</p><p>敬礼</p><p><br></p><p>${userInfo.name}</p><p>${new Date().toLocaleDateString('zh-CN')}</p>`
-  }
-})
+const handleCancel = () => {
+  router.push('/interaction')
+}
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .write-letter-page {
-  background: #fff;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: calc(100vh - 100px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
 }
 
-// 顶部操作栏
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e8e8e8;
-
-  .recipient-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-
-    .label {
-      font-size: 14px;
-      color: #409eff;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .add-icon {
-      color: #409eff;
-      cursor: pointer;
-      font-size: 18px;
-
-      &:hover {
-        color: #66b1ff;
-      }
-    }
-
-    .recipient-tags {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-
-      .dept-tag {
-        margin: 0;
-      }
-
-      .placeholder {
-        color: #c0c4cc;
-        font-size: 14px;
-      }
-    }
-  }
-
-  .top-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-
-    .action-link {
-      color: #606266;
-      font-size: 14px;
-      cursor: pointer;
-
-      &:hover {
-        color: #409eff;
-      }
-    }
-
-    .action-divider {
-      width: 1px;
-      height: 16px;
-      background: #dcdfe6;
-    }
-  }
+.page-header {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  padding: 30px 40px;
+  color: #fff;
 }
 
-// 主题行
-.subject-row {
+.header-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.page-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 30px 40px;
+}
+
+.letter-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-header {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e8e8e8;
-
-  .label {
-    font-size: 14px;
-    color: #303133;
-    font-weight: 500;
-    width: 50px;
-    white-space: nowrap;
-  }
-
-  .subject-input {
-    flex: 1;
-
-    :deep(.el-input__wrapper) {
-      box-shadow: none;
-      padding: 0;
-    }
-
-    :deep(.el-input__inner) {
-      font-size: 14px;
-    }
-  }
+  gap: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1890ff;
 }
 
-// 工具栏
-.toolbar {
-  border-bottom: 1px solid #e8e8e8;
-  background: #fafafa;
-
-  .toolbar-row {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
-    flex-wrap: wrap;
-
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-
-      &.format-group {
-        margin-left: auto;
-      }
-
-      &.right-group {
-        margin-left: 8px;
-      }
-    }
-
-    .tool-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 6px 10px;
-      border: none;
-      background: transparent;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      color: #606266;
-      transition: all 0.2s;
-
-      &:hover {
-        background: #e8e8e8;
-      }
-
-      &.active {
-        background: #ecf5ff;
-        color: #409eff;
-      }
-
-      .arrow {
-        font-size: 12px;
-      }
-
-      .format-text {
-        color: #409eff;
-        font-weight: 500;
-      }
-    }
-  }
-
-  .format-toolbar {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    gap: 8px;
-    border-top: 1px solid #e8e8e8;
-    background: #f5f5f5;
-    flex-wrap: wrap;
-
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .tool-btn-sm {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 28px;
-      height: 28px;
-      padding: 0 8px;
-      border: none;
-      background: transparent;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      color: #606266;
-      transition: all 0.2s;
-
-      &:hover {
-        background: #e0e0e0;
-      }
-
-      .arrow {
-        font-size: 12px;
-        margin-left: 2px;
-      }
-
-      .color-indicator {
-        font-weight: bold;
-      }
-
-      .highlight-indicator {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        background: #ffff00;
-        border-radius: 2px;
-      }
-
-      .quote-icon {
-        font-size: 16px;
-        color: #909399;
-      }
-
-      .code-icon {
-        font-family: monospace;
-        font-size: 12px;
-        color: #909399;
-      }
-    }
-  }
-}
-
-// 编辑器
-.editor-container {
-  flex: 1;
-  padding: 20px;
-  min-height: 400px;
-
-  .editor-content {
-    min-height: 350px;
-    outline: none;
-    font-size: 14px;
-    line-height: 1.8;
-    color: #303133;
-
-    &:empty::before {
-      content: '输入正文';
-      color: #c0c4cc;
-    }
-
-    :deep(img) {
-      max-width: 100%;
-      height: auto;
-    }
-
-    :deep(table) {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 10px 0;
-
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
-      }
-    }
-
-    :deep(pre) {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 4px;
-      font-family: monospace;
-      overflow-x: auto;
-    }
-  }
-}
-
-// 用户信息
-.user-info {
+.form-actions {
   display: flex;
-  align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid #e8e8e8;
+}
 
-  .user-avatar {
-    flex-shrink: 0;
-  }
+:deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #333;
+}
 
-  .user-detail {
-    .user-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: #303133;
-    }
-
-    .user-email {
-      font-size: 13px;
-      color: #909399;
-      margin-top: 2px;
-    }
-  }
+:deep(.el-input__wrapper) {
+  border-radius: 8px;
 }
 </style>
