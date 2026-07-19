@@ -1,5 +1,6 @@
 package com.gov.service.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.gov.common.result.Result;
 import com.gov.service.entity.ServiceItem;
 import com.gov.service.entity.ServiceRecord;
@@ -23,28 +24,50 @@ public class PaymentController {
     private ServiceItemService serviceItemService;
 
     @GetMapping("/calculate/{acceptNo}")
-    public Result<Map<String,Object>> calculate(@PathVariable String acceptNo) {
+    public Result<Map<String,Object>> calculate(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
+        Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
         ServiceRecord record = serviceRecordService.getByAcceptNo(acceptNo);
         if (record == null) {
             return Result.error("办件记录不存在");
         }
+        if (!userId.equals(record.getUserId())) {
+            return Result.error("无权访问此办件");
+        }
+
+        // 确定实际缴费金额：优先用记录的payAmount，否则从事项获取price
+        BigDecimal actualAmount = record.getPayAmount();
+        if (actualAmount == null) {
+            ServiceItem item = serviceItemService.getById(record.getItemId());
+            if (item != null && item.getPrice() != null) {
+                actualAmount = item.getPrice();
+                // 同步更新记录的payAmount
+                record.setPayAmount(actualAmount);
+                serviceRecordService.updateById(record);
+            } else {
+                actualAmount = BigDecimal.ZERO;
+            }
+        }
 
         Map<String,Object> result = new HashMap<>();
         result.put("acceptNo", acceptNo);
-        result.put("amount", record.getPayAmount() != null ? record.getPayAmount() : new BigDecimal("100.00"));
+        result.put("amount", actualAmount);
         result.put("description", "办事服务费");
         result.put("payStatus", record.getPayStatus() != null ? record.getPayStatus() : "待支付");
         return Result.success(result);
     }
 
     @PostMapping("/pay")
-    public Result<Map<String,Object>> pay(@RequestBody Map<String,Object> payData) {
+    public Result<Map<String,Object>> pay(@RequestAttribute("jwtToken") String token, @RequestBody Map<String,Object> payData) {
+        Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
         String acceptNo = (String) payData.get("acceptNo");
         BigDecimal amount = new BigDecimal(payData.get("amount").toString());
 
         ServiceRecord record = serviceRecordService.getByAcceptNo(acceptNo);
         if (record == null) {
             return Result.error("办件记录不存在");
+        }
+        if (!userId.equals(record.getUserId())) {
+            return Result.error("无权支付此办件");
         }
 
         if ("已支付".equals(record.getPayStatus())) {
@@ -54,6 +77,13 @@ public class PaymentController {
         record.setPayStatus("已支付");
         record.setPayAmount(amount);
         record.setPayTime(LocalDateTime.now());
+        
+        // 缴费完成后，如果审批已全部完成，自动推进到已办结
+        if ("已审批".equals(record.getStatus())) {
+            record.setStatus("已办结");
+            record.setFinishTime(LocalDateTime.now());
+        }
+        
         serviceRecordService.updateById(record);
 
         Map<String,Object> result = new HashMap<>();
@@ -66,10 +96,14 @@ public class PaymentController {
     }
 
     @GetMapping("/license/{acceptNo}")
-    public Result<Map<String,Object>> license(@PathVariable String acceptNo) {
+    public Result<Map<String,Object>> license(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
+        Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
         ServiceRecord record = serviceRecordService.getByAcceptNo(acceptNo);
         if (record == null) {
             return Result.error("办件记录不存在");
+        }
+        if (!userId.equals(record.getUserId())) {
+            return Result.error("无权领取此证照");
         }
 
         if (!"已办结".equals(record.getStatus())) {
@@ -91,10 +125,14 @@ public class PaymentController {
     }
 
     @GetMapping("/download/{acceptNo}")
-    public Result<Map<String,Object>> download(@PathVariable String acceptNo) {
+    public Result<Map<String,Object>> download(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
+        Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
         ServiceRecord record = serviceRecordService.getByAcceptNo(acceptNo);
         if (record == null) {
             return Result.error("办件记录不存在");
+        }
+        if (!userId.equals(record.getUserId())) {
+            return Result.error("无权下载此证照");
         }
 
         Map<String,Object> result = new HashMap<>();
@@ -105,8 +143,11 @@ public class PaymentController {
     }
 
     @GetMapping("/records")
-    public Result<List<Map<String,Object>>> paymentRecords(@RequestParam(required=false) String status) {
-        List<ServiceRecord> records = serviceRecordService.list();
+    public Result<List<Map<String,Object>>> paymentRecords(@RequestAttribute("jwtToken") String token) {
+        Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
+        List<ServiceRecord> records = serviceRecordService.list(Wrappers.<ServiceRecord>lambdaQuery()
+                .eq(ServiceRecord::getUserId, userId)
+                .orderByDesc(ServiceRecord::getSubmitTime));
         List<Map<String,Object>> result = new ArrayList<>();
 
         for (ServiceRecord record : records) {

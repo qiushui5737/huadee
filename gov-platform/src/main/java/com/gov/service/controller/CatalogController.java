@@ -75,6 +75,7 @@ public class CatalogController {
             map.put("deptCode", item.getDeptCode());
             map.put("description", item.getDescription());
             map.put("formSchema", item.getFormSchema());
+            map.put("price", item.getPrice() != null ? item.getPrice() : java.math.BigDecimal.ZERO);
             map.put("status", item.getStatus());
             map.put("createTime", item.getCreateTime());
             return map;
@@ -98,6 +99,7 @@ public class CatalogController {
         result.put("deptCode", item.getDeptCode());
         result.put("description", item.getDescription());
         result.put("formSchema", item.getFormSchema());
+        result.put("price", item.getPrice() != null ? item.getPrice() : java.math.BigDecimal.ZERO);
         result.put("status", item.getStatus());
         result.put("createTime", item.getCreateTime());
         
@@ -177,6 +179,17 @@ public class CatalogController {
         item.setStatus(1);
         item.setCreateTime(LocalDateTime.now());
         
+        // 设置缴费金额
+        if (body.containsKey("price") && body.get("price") != null) {
+            try {
+                item.setPrice(new java.math.BigDecimal(body.get("price").toString()));
+            } catch (Exception e) {
+                item.setPrice(java.math.BigDecimal.ZERO);
+            }
+        } else {
+            item.setPrice(java.math.BigDecimal.ZERO);
+        }
+        
         serviceItemService.save(item);
         
         return Result.success(item, "服务添加成功");
@@ -215,6 +228,13 @@ public class CatalogController {
         }
         if (isAdmin(request) && body.containsKey("deptCode")) {
             item.setDeptCode((String) body.get("deptCode"));
+        }
+        if (body.containsKey("price") && body.get("price") != null) {
+            try {
+                item.setPrice(new java.math.BigDecimal(body.get("price").toString()));
+            } catch (Exception e) {
+                // ignore
+            }
         }
         
         serviceItemService.updateById(item);

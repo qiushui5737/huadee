@@ -47,6 +47,43 @@
               <el-input v-model="formData.reason" type="textarea" :rows="3" placeholder="请详细说明申请事由" />
             </el-form-item>
 
+            <template v-if="schemaFields.length > 0">
+              <div class="dynamic-fields-title">
+                <el-icon><Document /></el-icon>
+                <span>所需材料</span>
+              </div>
+              <el-form-item 
+                v-for="field in schemaFields" 
+                :key="field.key" 
+                :label="field.label" 
+                :prop="field.key"
+              >
+                <el-input 
+                  v-if="field.type === 'textarea'" 
+                  v-model="formData[field.key]" 
+                  type="textarea" 
+                  :rows="3" 
+                  :placeholder="`请输入${field.label}`" 
+                />
+                <el-input 
+                  v-else-if="field.type === 'select'" 
+                  v-model="formData[field.key]" 
+                  :placeholder="`请选择${field.label}`" 
+                >
+                  <template #append>
+                    <el-select v-model="formData[field.key]" :placeholder="`请选择${field.label}`">
+                      <el-option v-for="opt in field.options" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    </el-select>
+                  </template>
+                </el-input>
+                <el-input 
+                  v-else 
+                  v-model="formData[field.key]" 
+                  :placeholder="`请输入${field.label}`" 
+                />
+              </el-form-item>
+            </template>
+
             <el-form-item label="附件材料">
               <el-upload
                 class="upload-demo"
@@ -141,7 +178,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { EditPen, Upload, ArrowLeft, Check, View, InfoFilled, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { submitForm } from '@/api/service'
+import { submitForm, formSchema } from '@/api/service'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,6 +187,7 @@ const submitting = ref(false)
 
 const itemName = ref('')
 const fileList = ref<any[]>([])
+const schemaFields = ref<any[]>([])
 
 const formData = reactive({
   acceptNo: '',
@@ -160,7 +198,7 @@ const formData = reactive({
   reason: ''
 })
 
-const formRules = {
+const formRules = reactive({
   userName: [
     { required: true, message: '请输入申请人姓名', trigger: 'blur' }
   ],
@@ -174,6 +212,26 @@ const formRules = {
   reason: [
     { required: true, message: '请输入申请事由', trigger: 'blur' }
   ]
+})
+
+const loadFormSchema = async () => {
+  const itemId = route.query.itemId
+  if (!itemId) return
+  try {
+    const res = await formSchema(Number(itemId))
+    const fields = res.data?.fields || []
+    schemaFields.value = fields.filter((f: any) => !['userName', 'phone', 'address', 'reason'].includes(f.key))
+    for (const field of schemaFields.value) {
+      if (!(field.key in formData)) {
+        formData[field.key as string] = ''
+      }
+      if (field.required && !(field.key in formRules)) {
+        formRules[field.key as string] = [{ required: true, message: `请输入${field.label}`, trigger: 'blur' }]
+      }
+    }
+  } catch (error) {
+    console.error('加载表单schema失败', error)
+  }
 }
 
 const handleFileChange = (file: any) => {
@@ -199,7 +257,11 @@ const handleSubmit = async () => {
         phone: formData.phone,
         address: formData.address,
         reason: formData.reason,
-        formData: JSON.stringify(formData)
+        ...Object.fromEntries(
+          Object.entries(formData).filter(([key]) => 
+            !['acceptNo', 'itemName', 'userName', 'phone', 'address', 'reason'].includes(key)
+          )
+        )
       })
       
       if (res.code === 200) {
@@ -222,10 +284,11 @@ const handleCancel = () => {
   router.push('/service')
 }
 
-onMounted(() => {
+onMounted(async () => {
   formData.acceptNo = 'SL' + Date.now() + Math.floor(Math.random() * 1000)
   formData.itemName = route.query.itemName as string || '在线申报事项'
   itemName.value = formData.itemName
+  await loadFormSchema()
 })
 </script>
 
