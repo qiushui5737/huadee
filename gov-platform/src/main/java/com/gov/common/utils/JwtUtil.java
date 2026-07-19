@@ -17,7 +17,8 @@ public class JwtUtil {
 
     private static final String SECRET = "gov-platform-secret-key-2026-must-be-at-least-32-bytes";
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
-    private static final long EXPIRATION = 24 * 60 * 60 * 1000L; // 24小时
+    public static final long EXPIRATION_SECONDS = 2 * 60 * 60L;
+    private static final long EXPIRATION_MILLIS = EXPIRATION_SECONDS * 1000L;
 
     /**
      * 生成JWT Token
@@ -31,7 +32,7 @@ public class JwtUtil {
                 .claims(claims)
                 .subject(username)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_MILLIS))
                 .signWith(KEY)
                 .compact();
     }
@@ -63,6 +64,6 @@ public class JwtUtil {
      * 从Token中获取用户ID
      */
     public static Long getUserId(String token) {
-        return parseToken(token).get("userId", Long.class);
+        return parseToken(token).get("userId", Number.class).longValue();
     }
 }

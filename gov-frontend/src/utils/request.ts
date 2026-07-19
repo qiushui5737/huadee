@@ -33,6 +33,10 @@ request.interceptors.response.use(
     if (res.code === 200) {
       return res
     } else {
+      if (res.code === 401) {
+        const isAdmin = window.location.pathname.startsWith('/admin')
+        localStorage.removeItem(isAdmin ? 'admin_token' : 'c_token')
+      }
       ElMessage.error(res.message || '请求失败')
       return Promise.reject(new Error(res.message || 'Error'))
     }
@@ -44,7 +48,7 @@ request.interceptors.response.use(
       if (isAdmin) {
         window.location.href = '/admin/login'
       } else {
-        window.location.href = '/'
+        window.location.href = '/login'
       }
     }
     ElMessage.error(error.response?.data?.message || '网络异常')

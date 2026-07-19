@@ -1,2 +1,40 @@
-﻿body { margin: 0; }
+body { margin: 0; }
 $primary-color: #1890ff;
+
+*,*::before,*::after{box-sizing:border-box}
+button,input,select,textarea{font:inherit}
+
+.skip-link{position:fixed;top:8px;left:12px;z-index:10020;padding:10px 16px;background:#fff;color:#064f86;border:2px solid #064f86;transform:translateY(-150%);text-decoration:none}
+.skip-link:focus{transform:translateY(0)}
+.a11y-launcher{position:fixed;right:0;top:42%;z-index:10000;width:44px;min-height:104px;padding:10px 7px;border:0;background:#075f9f;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.22)}
+.a11y-launcher .el-icon{font-size:21px}.a11y-launcher span{writing-mode:vertical-rl;letter-spacing:0}
+.a11y-launcher:hover,.a11y-launcher:focus-visible{background:#004878}
+.a11y-toolbar{position:fixed;inset:0 0 auto 0;z-index:10010;background:#fff;border-bottom:3px solid #126ca8;box-shadow:0 5px 18px rgba(20,55,80,.24)}
+.toolbar-inner{min-height:76px;width:min(1440px,100%);margin:auto;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.toolbar-inner>strong{margin-right:4px;color:#17364d;font-size:17px}
+.tool-group{height:42px;display:flex;border:1px solid #afbdc8}
+.tool-group button,.tool-button,.close-button{height:40px;border:0;background:#fff;color:#304757;cursor:pointer}
+.tool-group button{min-width:54px;padding:0 12px;border-right:1px solid #d5dde3}.tool-group button:last-child{border-right:0}
+.tool-button{display:flex;align-items:center;gap:7px;padding:0 12px;border:1px solid #afbdc8}
+.tool-button .el-icon{font-size:18px}.tool-group button:hover,.tool-group button.active,.tool-button:hover,.tool-button.active{background:#075f9f;color:#fff}
+.close-button{width:40px;margin-left:auto;border:1px solid #afbdc8;font-size:18px}.close-button:hover{background:#e9eef2;color:#9f1e25}
+
+:focus-visible{outline:3px solid #ffbf47!important;outline-offset:3px!important}
+
+html[data-a11y-font="120"] #app-main :where(p,a,button,label,input,textarea,select,li,td,th,span:not(.seal):not(.service-mark)){font-size:max(1em,18px)!important;line-height:1.65}
+html[data-a11y-font="140"] #app-main :where(p,a,button,label,input,textarea,select,li,td,th,span:not(.seal):not(.service-mark)){font-size:max(1em,20px)!important;line-height:1.75}
+
+html.a11y-highlight-links #app-main a{text-decoration:underline!important;text-decoration-thickness:2px!important;text-underline-offset:4px!important}
+html.a11y-highlight-links #app-main a:focus,html.a11y-highlight-links #app-main a:hover{outline:2px solid currentColor;outline-offset:2px}
+
+html.a11y-reduce-motion,html.a11y-reduce-motion *{scroll-behavior:auto!important}
+html.a11y-reduce-motion *::before,html.a11y-reduce-motion *::after,html.a11y-reduce-motion *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+
+html.a11y-high-contrast body,html.a11y-high-contrast #app-main,html.a11y-high-contrast #app-main main,html.a11y-high-contrast #app-main section,html.a11y-high-contrast #app-main header,html.a11y-high-contrast .el-popper,html.a11y-high-contrast .el-dialog{background:#000!important;color:#fff!important}
+html.a11y-high-contrast #app-main :where(h1,h2,h3,h4,h5,p,span,label,li,td,th,strong,small),html.a11y-high-contrast .el-popper :where(span,li),html.a11y-high-contrast .el-dialog :where(h1,h2,h3,p,span,label){color:#fff!important}
+html.a11y-high-contrast #app-main a,html.a11y-high-contrast #app-main button:not(.primary-btn),html.a11y-high-contrast .el-popper a{color:#ffeb3b!important}
+html.a11y-high-contrast #app-main :where(input,textarea,select),html.a11y-high-contrast .el-input__wrapper,html.a11y-high-contrast .el-select__wrapper{background:#111!important;color:#fff!important;border-color:#fff!important;box-shadow:0 0 0 1px #fff inset!important}
+html.a11y-high-contrast #app-main :where(nav,footer,div),html.a11y-high-contrast .el-popper{border-color:#fff!important}
+
+@media(max-width:900px){.a11y-launcher{top:auto;bottom:90px;min-height:44px;width:44px}.a11y-launcher span{display:none}.toolbar-inner{padding:10px 12px;gap:8px}.toolbar-inner>strong{width:calc(100% - 52px)}.close-button{position:absolute;right:12px;top:10px}.tool-button span{display:none}.tool-button{width:42px;padding:0;justify-content:center}}
+
