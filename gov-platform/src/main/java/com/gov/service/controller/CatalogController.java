@@ -76,6 +76,9 @@ public class CatalogController {
             map.put("description", item.getDescription());
             map.put("formSchema", item.getFormSchema());
             map.put("price", item.getPrice() != null ? item.getPrice() : java.math.BigDecimal.ZERO);
+            map.put("conditions", item.getConditions());
+            map.put("timeLimit", item.getTimeLimit());
+            map.put("processDesc", item.getProcessDesc());
             map.put("status", item.getStatus());
             map.put("createTime", item.getCreateTime());
             return map;
@@ -100,6 +103,9 @@ public class CatalogController {
         result.put("description", item.getDescription());
         result.put("formSchema", item.getFormSchema());
         result.put("price", item.getPrice() != null ? item.getPrice() : java.math.BigDecimal.ZERO);
+        result.put("conditions", item.getConditions());
+        result.put("timeLimit", item.getTimeLimit());
+        result.put("processDesc", item.getProcessDesc());
         result.put("status", item.getStatus());
         result.put("createTime", item.getCreateTime());
         
@@ -176,6 +182,9 @@ public class CatalogController {
         
         item.setDescription((String) body.get("description"));
         item.setFormSchema((String) body.get("formSchema"));
+        item.setConditions((String) body.get("conditions"));
+        item.setTimeLimit((String) body.get("timeLimit"));
+        item.setProcessDesc((String) body.get("processDesc"));
         item.setStatus(1);
         item.setCreateTime(LocalDateTime.now());
         
@@ -222,6 +231,15 @@ public class CatalogController {
         }
         if (body.containsKey("formSchema")) {
             item.setFormSchema((String) body.get("formSchema"));
+        }
+        if (body.containsKey("conditions")) {
+            item.setConditions((String) body.get("conditions"));
+        }
+        if (body.containsKey("timeLimit")) {
+            item.setTimeLimit((String) body.get("timeLimit"));
+        }
+        if (body.containsKey("processDesc")) {
+            item.setProcessDesc((String) body.get("processDesc"));
         }
         if (body.containsKey("status")) {
             item.setStatus((Integer) body.get("status"));

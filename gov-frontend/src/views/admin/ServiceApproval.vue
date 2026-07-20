@@ -35,6 +35,7 @@
           <div class="filter-bar">
             <el-select v-model="statusFilter" placeholder="全部状态" style="width:150px;">
               <el-option label="全部" value="" />
+              <el-option label="草稿" value="草稿" />
               <el-option label="提交申请" value="提交申请" />
               <el-option label="审核中" value="审核中" />
               <el-option label="已审批" value="已审批" />
@@ -84,13 +85,27 @@
                   <el-tag :type="getStatusType(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
                 </template>
               </el-table-column>
+              <el-table-column prop="currentStage" label="当前阶段" width="110">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.currentStage" size="small" type="info">{{ scope.row.currentStage }}</el-tag>
+                  <span v-else style="color:#999;">-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="补充材料" width="100">
+                <template #default="scope">
+                  <el-tag v-if="scope.row.supplementStatus === '待补充'" size="small" type="warning">待补充</el-tag>
+                  <el-tag v-else-if="scope.row.supplementStatus === '已补充'" size="small" type="success">已补充</el-tag>
+                  <span v-else style="color:#999;">-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="submitTime" label="提交时间" width="180" />
               <el-table-column prop="finishTime" label="办结时间" width="180" />
-              <el-table-column label="操作" width="200">
+              <el-table-column label="操作" width="280">
                 <template #default="scope">
                   <el-button type="primary" size="small" @click="viewDetail(scope.row)">详情</el-button>
-                  <el-button size="small" @click="handleApprove(scope.row)" v-if="scope.row.status !== '已办结'">通过</el-button>
-                  <el-button type="danger" size="small" @click="handleReject(scope.row)" v-if="scope.row.status === '提交申请' || scope.row.status === '审核中' || scope.row.status === '已审批'">驳回</el-button>
+                  <el-button size="small" @click="handleApprove(scope.row)" v-if="scope.row.status !== '已办结' && scope.row.status !== '已驳回'">推进</el-button>
+                  <el-button type="warning" size="small" @click="handleSupplement(scope.row)" v-if="scope.row.status === '审核中' && scope.row.currentStage === '材料初审'">补充材料</el-button>
+                  <el-button type="danger" size="small" @click="handleReject(scope.row)" v-if="scope.row.status !== '已办结' && scope.row.status !== '已驳回'">驳回</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -151,10 +166,18 @@
         <el-descriptions-item label="申请人">{{ detailRecord.userName }}</el-descriptions-item>
         <el-descriptions-item label="当前状态">
           <el-tag :type="getStatusType(detailRecord.status)">{{ detailRecord.status }}</el-tag>
+          <el-tag v-if="detailRecord.currentStage" type="info" size="small" style="margin-left:8px;">{{ detailRecord.currentStage }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="提交时间">{{ detailRecord.submitTime }}</el-descriptions-item>
         <el-descriptions-item label="办结时间">{{ detailRecord.finishTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审批意见">{{ detailRecord.comment || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="审批意见" :span="2">{{ detailRecord.comment || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="驳回原因" :span="2" v-if="detailRecord.rejectReason">
+          <span style="color:#f56c6c;">{{ detailRecord.rejectReason }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="补充材料" :span="2" v-if="detailRecord.supplementStatus === '待补充'">
+          <el-tag type="warning" size="small">待补充</el-tag>
+          <span style="margin-left:8px;">原因：{{ detailRecord.supplementReason }}</span>
+        </el-descriptions-item>
         <el-descriptions-item label="缴费信息">
           <template v-if="detailRecord.payAmount && detailRecord.payAmount > 0">
             <span style="color: #f56c6c; font-weight: bold;">¥{{ detailRecord.payAmount }}</span>
@@ -186,11 +209,13 @@
       </el-descriptions>
 
       <div style="margin-top:20px;">
-        <el-steps :active="getStepIndex(detailRecord.status)" align-center>
+        <el-steps :active="getStepIndex(detailRecord.currentStage || detailRecord.status)" align-center>
           <el-step title="提交申请" description="群众提交申请" />
-          <el-step title="材料审核" description="审核员审核材料" />
-          <el-step title="审批决定" description="领导审批" />
-          <el-step title="办结通知" description="办理完成" />
+          <el-step title="窗口受理" description="窗口人员受理" />
+          <el-step title="材料初审" description="审核材料齐全性" />
+          <el-step title="实质审核" description="业务部门审核" />
+          <el-step title="领导审批" description="领导最终审批" />
+          <el-step title="结果送达" description="办理完成" />
         </el-steps>
       </div>
 
@@ -220,8 +245,9 @@
 
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleApprove(detailRecord)" v-if="detailRecord.status !== '已办结'">通过</el-button>
-        <el-button type="danger" @click="handleReject(detailRecord)" v-if="detailRecord.status === '提交申请' || detailRecord.status === '审核中' || detailRecord.status === '已审批'">驳回</el-button>
+        <el-button type="warning" @click="handleSupplement(detailRecord)" v-if="detailRecord.status === '审核中' && detailRecord.currentStage === '材料初审'">要求补充材料</el-button>
+        <el-button type="primary" @click="handleApprove(detailRecord)" v-if="detailRecord.status !== '已办结' && detailRecord.status !== '已驳回'">推进</el-button>
+        <el-button type="danger" @click="handleReject(detailRecord)" v-if="detailRecord.status !== '已办结' && detailRecord.status !== '已驳回'">驳回</el-button>
       </template>
     </el-dialog>
 
@@ -255,6 +281,21 @@
         <el-button type="primary" @click="confirmReply">确认回复</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="supplementDialogVisible" title="要求补充材料" width="500px">
+      <el-form :model="supplementForm" label-width="100px">
+        <el-form-item label="受理号">
+          <el-input :value="supplementForm.acceptNo" readonly />
+        </el-form-item>
+        <el-form-item label="补充原因" required>
+          <el-input v-model="supplementForm.reason" type="textarea" :rows="4" placeholder="请说明需要补充哪些材料" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="supplementDialogVisible = false">取消</el-button>
+        <el-button type="warning" @click="confirmSupplement">发送通知</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -262,7 +303,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
 import { Search, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { approvalRecords, approve, batchApprove, getInquiries, getAllInquiries, replyInquiry, recordDetail } from '@/api/service'
+import { approvalRecords, approve, batchApprove, getInquiries, getAllInquiries, replyInquiry, recordDetail, requestSupplement, getAttachments } from '@/api/service'
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -292,6 +333,12 @@ const replyDialogVisible = ref(false)
 const currentInquiry = reactive<any>({})
 const replyForm = reactive({
   reply: ''
+})
+
+const supplementDialogVisible = ref(false)
+const supplementForm = reactive({
+  acceptNo: '',
+  reason: ''
 })
 
 const stats = reactive({
@@ -326,14 +373,11 @@ const getStatusType = (status: string) => {
   }
 }
 
-const getStepIndex = (status: string) => {
-  switch (status) {
-    case '提交申请': return 0
-    case '审核中': return 1
-    case '已审批': return 2
-    case '已办结': return 3
-    default: return 0
+const getStepIndex = (stage: string) => {
+  const map: Record<string, number> = {
+    '提交申请': 0, '窗口受理': 1, '材料初审': 2, '实质审核': 3, '领导审批': 4, '已办结': 5, '待缴费办结': 5
   }
+  return map[stage] ?? 0
 }
 
 const fieldLabelMap: Record<string, string> = {
@@ -520,6 +564,28 @@ const handleReject = (row: any) => {
   approveForm.comment = ''
   approveForm.completeDirectly = false
   approveDialogVisible.value = true
+}
+
+const handleSupplement = (row: any) => {
+  supplementForm.acceptNo = row.acceptNo
+  supplementForm.reason = ''
+  supplementDialogVisible.value = true
+}
+
+const confirmSupplement = async () => {
+  if (!supplementForm.reason.trim()) {
+    ElMessage.warning('请说明需要补充的材料')
+    return
+  }
+  const res = await requestSupplement(supplementForm.acceptNo, supplementForm.reason)
+  if (res.code === 200) {
+    ElMessage.success(res.message)
+    supplementDialogVisible.value = false
+    detailDialogVisible.value = false
+    loadRecords()
+  } else {
+    ElMessage.error(res.message || '操作失败')
+  }
 }
 
 const confirmApprove = async () => {

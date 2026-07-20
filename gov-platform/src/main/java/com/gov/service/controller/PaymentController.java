@@ -4,9 +4,13 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.gov.common.result.Result;
 import com.gov.service.entity.ServiceItem;
 import com.gov.service.entity.ServiceRecord;
+import com.gov.service.service.CertificateGenerator;
 import com.gov.service.service.ServiceItemService;
 import com.gov.service.service.ServiceRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -23,6 +27,9 @@ public class PaymentController {
     @Autowired
     private ServiceItemService serviceItemService;
 
+    @Autowired
+    private CertificateGenerator certificateGenerator;
+
     @GetMapping("/calculate/{acceptNo}")
     public Result<Map<String,Object>> calculate(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
         Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
@@ -32,6 +39,10 @@ public class PaymentController {
         }
         if (!userId.equals(record.getUserId())) {
             return Result.error("无权访问此办件");
+        }
+        // 草稿不能缴费
+        if (record.getDraft() != null && record.getDraft() == 1) {
+            return Result.error("草稿状态，请先提交申请");
         }
 
         // 确定实际缴费金额：优先用记录的payAmount，否则从事项获取price
@@ -69,6 +80,10 @@ public class PaymentController {
         if (!userId.equals(record.getUserId())) {
             return Result.error("无权支付此办件");
         }
+        // 草稿不能缴费
+        if (record.getDraft() != null && record.getDraft() == 1) {
+            return Result.error("草稿状态，请先提交申请");
+        }
 
         if ("已支付".equals(record.getPayStatus())) {
             return Result.error("该办件已支付");
@@ -78,9 +93,13 @@ public class PaymentController {
         record.setPayAmount(amount);
         record.setPayTime(LocalDateTime.now());
         
-        // 缴费完成后，如果审批已全部完成，自动推进到已办结
-        if ("已审批".equals(record.getStatus())) {
+        // 缴费完成后自动推进到已办结
+        // 兼容多阶段审批的"待缴费办结"和旧流程的"已审批"
+        String status = record.getStatus();
+        String stage = record.getCurrentStage();
+        if ("待缴费办结".equals(stage) || "已审批".equals(status)) {
             record.setStatus("已办结");
+            record.setCurrentStage("已办结");
             record.setFinishTime(LocalDateTime.now());
         }
         
@@ -92,7 +111,8 @@ public class PaymentController {
         result.put("payTime", record.getPayTime());
         result.put("payNo", "PAY" + System.currentTimeMillis());
         result.put("payStatus", "已支付");
-        return Result.success(result, "支付成功");
+        result.put("serviceStatus", record.getStatus());
+        return Result.success(result, "支付成功，办件已办结");
     }
 
     @GetMapping("/license/{acceptNo}")
@@ -125,21 +145,46 @@ public class PaymentController {
     }
 
     @GetMapping("/download/{acceptNo}")
-    public Result<Map<String,Object>> download(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
+    public ResponseEntity<byte[]> download(@RequestAttribute("jwtToken") String token, @PathVariable String acceptNo) {
         Long userId = com.gov.common.utils.JwtUtil.getUserIdFromToken(token);
         ServiceRecord record = serviceRecordService.getByAcceptNo(acceptNo);
         if (record == null) {
-            return Result.error("办件记录不存在");
+            return ResponseEntity.notFound().build();
         }
         if (!userId.equals(record.getUserId())) {
-            return Result.error("无权下载此证照");
+            return ResponseEntity.status(403).build();
         }
 
-        Map<String,Object> result = new HashMap<>();
-        result.put("acceptNo", acceptNo);
-        result.put("message", "证照下载链接已生成");
-        result.put("url", "/download/license/" + acceptNo + ".pdf");
-        return Result.success(result);
+        // 获取事项名称
+        ServiceItem item = serviceItemService.getById(record.getItemId());
+        String itemName = item != null ? item.getItemName() : "政务服务事项";
+
+        // 解析表单数据
+        java.util.Map<String, Object> formData = new java.util.HashMap<>();
+        if (record.getFormData() != null) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                formData = mapper.readValue(record.getFormData(), java.util.Map.class);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        // 生成证照PDF
+        byte[] pdfBytes = certificateGenerator.generateCertificate(
+                acceptNo, itemName, record.getUserName(), formData);
+
+        String fileName = itemName + "_证照_" + acceptNo + ".pdf";
+        try {
+            fileName = java.net.URLEncoder.encode(fileName, "UTF-8");
+        } catch (Exception e) {
+            // ignore
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     @GetMapping("/records")
@@ -151,6 +196,10 @@ public class PaymentController {
         List<Map<String,Object>> result = new ArrayList<>();
 
         for (ServiceRecord record : records) {
+            // 过滤草稿
+            if (record.getDraft() != null && record.getDraft() == 1) {
+                continue;
+            }
             Map<String,Object> map = new HashMap<>();
             map.put("acceptNo", record.getAcceptNo());
             map.put("userName", record.getUserName());

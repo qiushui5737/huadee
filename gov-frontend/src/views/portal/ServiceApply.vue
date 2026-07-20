@@ -107,6 +107,9 @@
                 <el-button @click="handleCancel">
                   <el-icon><ArrowLeft /></el-icon> 返回
                 </el-button>
+                <el-button type="warning" @click="handleSaveDraft" :loading="drafting">
+                  <el-icon><FolderAdd /></el-icon> 暂存草稿
+                </el-button>
                 <el-button type="primary" @click="handleSubmit" :loading="submitting">
                   <el-icon><Check /></el-icon> 提交申请
                 </el-button>
@@ -163,9 +166,11 @@
 
           <el-steps :active="0" align-center>
             <el-step title="提交申请" description="填写表单并提交" />
-            <el-step title="材料审核" description="工作人员审核材料" />
-            <el-step title="审批决定" description="领导审批" />
-            <el-step title="办结通知" description="办理完成" />
+            <el-step title="窗口受理" description="窗口人员受理" />
+            <el-step title="材料初审" description="审核材料齐全性" />
+            <el-step title="实质审核" description="业务部门审核" />
+            <el-step title="领导审批" description="领导最终审批" />
+            <el-step title="结果送达" description="办理完成" />
           </el-steps>
         </el-card>
       </div>
@@ -176,14 +181,16 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { EditPen, Upload, ArrowLeft, Check, View, InfoFilled, List } from '@element-plus/icons-vue'
+import { EditPen, Upload, ArrowLeft, Check, View, InfoFilled, List, FolderAdd } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { submitForm, formSchema } from '@/api/service'
+import { submitForm, formSchema, uploadFile, getDrafts, recordDetail } from '@/api/service'
 
 const route = useRoute()
 const router = useRouter()
 const formRef = ref()
 const submitting = ref(false)
+const drafting = ref(false)
+const uploadedFiles = ref<any[]>([])
 
 const itemName = ref('')
 const fileList = ref<any[]>([])
@@ -251,21 +258,39 @@ const handleSubmit = async () => {
     submitting.value = true
     
     try {
-      const res = await submitForm({
+      // 构建提交数据，确保草稿受理号正确传递
+      const submitData: any = {
         itemId: route.query.itemId,
         userName: formData.userName,
         phone: formData.phone,
         address: formData.address,
         reason: formData.reason,
+        isDraft: false,
         ...Object.fromEntries(
           Object.entries(formData).filter(([key]) => 
             !['acceptNo', 'itemName', 'userName', 'phone', 'address', 'reason'].includes(key)
           )
         )
-      })
+      }
+      // 如果是编辑草稿，传递草稿受理号
+      if (route.query.draftAcceptNo) {
+        submitData.acceptNo = route.query.draftAcceptNo
+      }
+      const res = await submitForm(submitData)
       
       if (res.code === 200) {
         ElMessage.success(res.message)
+        // 上传附件
+        const acceptNo = res.data?.acceptNo
+        if (acceptNo && fileList.value.length > 0) {
+          for (const f of fileList.value) {
+            try {
+              await uploadFile(f.raw, acceptNo)
+            } catch (e) {
+              console.error('附件上传失败', e)
+            }
+          }
+        }
         setTimeout(() => {
           router.push('/service')
         }, 1500)
@@ -280,6 +305,49 @@ const handleSubmit = async () => {
   })
 }
 
+const handleSaveDraft = async () => {
+  drafting.value = true
+  try {
+    // 构建草稿保存数据
+    const submitData: any = {
+      itemId: route.query.itemId,
+      userName: formData.userName,
+      phone: formData.phone,
+      address: formData.address,
+      reason: formData.reason,
+      isDraft: true,
+      ...Object.fromEntries(
+        Object.entries(formData).filter(([key]) => 
+          !['acceptNo', 'itemName', 'userName', 'phone', 'address', 'reason'].includes(key)
+        )
+      )
+    }
+    // 如果是编辑已有草稿，传递草稿受理号以更新
+    if (route.query.draftAcceptNo) {
+      submitData.acceptNo = route.query.draftAcceptNo
+    }
+    const res = await submitForm(submitData)
+    if (res.code === 200) {
+      ElMessage.success('草稿已保存')
+      // 保存成功后，如果是新建草稿，更新URL参数以便后续提交时能关联到此草稿
+      if (!route.query.draftAcceptNo && res.data?.acceptNo) {
+        router.replace({
+          query: {
+            ...route.query,
+            draftAcceptNo: res.data.acceptNo
+          }
+        })
+      }
+    } else {
+      ElMessage.error(res.message)
+    }
+  } catch (error) {
+    ElMessage.error('保存草稿失败')
+  } finally {
+    drafting.value = false
+  }
+}
+
 const handleCancel = () => {
   router.push('/service')
 }
@@ -289,6 +357,35 @@ onMounted(async () => {
   formData.itemName = route.query.itemName as string || '在线申报事项'
   itemName.value = formData.itemName
   await loadFormSchema()
+  
+  // 如果是编辑草稿，加载草稿数据填充表单
+  if (route.query.draftAcceptNo) {
+    try {
+      const res = await recordDetail(route.query.draftAcceptNo as string)
+      if (res.code === 200 && res.data) {
+        const draftData = res.data
+        // 填充表单数据
+        if (draftData.formData) {
+          try {
+            const data = typeof draftData.formData === 'string' 
+              ? JSON.parse(draftData.formData) 
+              : draftData.formData
+            Object.keys(data).forEach(key => {
+              formData[key] = data[key]
+            })
+          } catch (e) {
+            console.error('解析草稿数据失败', e)
+          }
+        }
+        // 填充用户名
+        if (draftData.userName) {
+          formData.userName = draftData.userName
+        }
+      }
+    } catch (error) {
+      console.error('加载草稿失败', error)
+    }
+  }
 })
 </script>
 

@@ -50,4 +50,25 @@ public class ServiceRecord {
 
     @TableField("license_status")
     private String licenseStatus;
+
+    @TableField("draft")
+    private Integer draft;
+
+    @TableField("current_stage")
+    private String currentStage;
+
+    @TableField("supplement_reason")
+    private String supplementReason;
+
+    @TableField("supplement_status")
+    private String supplementStatus;
+
+    @TableField("reject_reason")
+    private String rejectReason;
+
+    @TableField("rating")
+    private Integer rating;
+
+    @TableField("rating_content")
+    private String ratingContent;
 }

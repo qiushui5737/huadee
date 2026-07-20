@@ -18,6 +18,27 @@ export const formProgress = (acceptNo: string) => request.get(`/service/form/pro
 export const records = (params?: any) => request.get('/service/form/records', { params })
 export const recordDetail = (acceptNo: string) => request.get(`/service/form/records/${acceptNo}`)
 
+// 草稿
+export const getDrafts = () => request.get('/service/form/drafts')
+export const deleteDraft = (acceptNo: string) => request.delete(`/service/form/drafts/${acceptNo}`)
+
+// 文件上传
+export const uploadFile = (file: File, acceptNo: string) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('acceptNo', acceptNo)
+  return request.post('/service/form/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+export const getAttachments = (acceptNo: string) => request.get(`/service/form/attachments/${acceptNo}`)
+
+// 补充材料
+export const requestSupplement = (acceptNo: string, reason: string) => request.post(`/service/form/supplement/${acceptNo}`, { reason })
+export const supplementDone = (acceptNo: string) => request.post(`/service/form/supplement-done/${acceptNo}`)
+
+// 服务评价
+export const submitRating = (data: any) => request.post('/service/form/rating', data)
+export const getAllRatings = () => request.get('/service/form/ratings')
+
 // B4-进度查询 & B5-缴费证照
 export const calculatePayment = (acceptNo: string) => request.get(`/service/payment/calculate/${acceptNo}`)
 export const pay = (data: any) => request.post('/service/payment/pay', data)

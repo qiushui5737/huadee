@@ -110,6 +110,37 @@
           </div>
         </el-tab-pane>
 
+        <el-tab-pane label="我的草稿" name="drafts">
+          <div class="drafts-section">
+            <div class="drafts-header">
+              <h3>我的草稿</h3>
+              <el-button type="primary" @click="loadDrafts">
+                <el-icon :size="16"><Refresh /></el-icon> 刷新
+              </el-button>
+            </div>
+
+            <el-table v-if="draftsList.length > 0" :data="draftsList" border class="drafts-table">
+              <el-table-column prop="itemName" label="事项名称" width="200" />
+              <el-table-column prop="acceptNo" label="草稿编号" width="180" />
+              <el-table-column prop="submitTime" label="保存时间" width="180" />
+              <el-table-column label="操作" width="200">
+                <template #default="{ row }">
+                  <el-button type="primary" size="small" @click="editDraft(row)">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-button>
+                  <el-button type="danger" size="small" @click="handleDeleteDraft(row)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+
+            <div v-else class="empty-state">
+              <el-empty description="暂无草稿记录" :image-size="120" />
+            </div>
+          </div>
+        </el-tab-pane>
+
         <el-tab-pane label="进度查询" name="progress">
           <div class="progress-section">
             <div class="search-box">
@@ -221,13 +252,24 @@
                     <el-icon :size="14"><CreditCard /></el-icon> 立即支付
                   </el-button>
                   <el-button 
-                    v-if="record.licenseStatus === '已发放'" 
+                    v-if="record.serviceStatus === '已办结'" 
                     type="success" 
                     size="small" 
                     @click="doDownload(record.acceptNo)"
                   >
                     <el-icon :size="14"><Download /></el-icon> 下载证照
                   </el-button>
+                  <el-button 
+                    v-if="record.serviceStatus === '已办结' && !record.rating" 
+                    type="warning" 
+                    size="small" 
+                    @click="openRatingDialog(record)"
+                  >
+                    <el-icon :size="14"><Star /></el-icon> 服务评价
+                  </el-button>
+                  <el-tag v-if="record.rating" type="warning" size="small">
+                    已评价 {{ record.rating }}星
+                  </el-tag>
                 </div>
               </el-card>
             </div>
@@ -271,15 +313,34 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 服务评价对话框 -->
+    <el-dialog v-model="showRatingDialog" title="服务评价" width="500px">
+      <el-form :model="ratingForm" label-width="80px">
+        <el-form-item label="受理号">
+          <el-input :value="ratingForm.acceptNo" readonly />
+        </el-form-item>
+        <el-form-item label="评分" required>
+          <el-rate v-model="ratingForm.rating" :max="5" show-text :texts="['很差', '较差', '一般', '较好', '很好']" />
+        </el-form-item>
+        <el-form-item label="评价内容">
+          <el-input v-model="ratingForm.content" type="textarea" :rows="4" placeholder="请输入您的评价内容（选填）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRatingDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitRatingHandler">提交评价</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ArrowLeft, Wallet, CreditCard, Document, Download, Clock, Message, Refresh, ChatRound } from '@element-plus/icons-vue'
+import { Search, ArrowLeft, Wallet, CreditCard, Document, Download, Clock, Message, Refresh, ChatRound, Edit, Delete, Star } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { categories, items, itemDetail, formSchema, submitForm, formProgress, recordDetail, calculatePayment, pay, getLicense, downloadLicense, paymentRecords, inquiryProgress, getInquiries } from '@/api/service'
+import { categories, items, itemDetail, formSchema, submitForm, formProgress, recordDetail, calculatePayment, pay, getLicense, downloadLicense, paymentRecords, inquiryProgress, getInquiries, getDrafts, deleteDraft, submitRating } from '@/api/service'
 
 const activeTab = ref('catalog')
 const keyword = ref('')
@@ -308,6 +369,82 @@ const paymentRecordsList = ref<any[]>([])
 const showInquiryDialog = ref(false)
 const inquiryForm = reactive({ content: '' })
 const inquiriesList = ref<any[]>([])
+
+// 评价相关
+const showRatingDialog = ref(false)
+const ratingForm = reactive({ acceptNo: '', rating: 0, content: '' })
+
+const openRatingDialog = (record: any) => {
+  ratingForm.acceptNo = record.acceptNo
+  ratingForm.rating = 0
+  ratingForm.content = ''
+  showRatingDialog.value = true
+}
+
+const submitRatingHandler = async () => {
+  if (!ratingForm.rating || ratingForm.rating < 1) {
+    ElMessage.warning('请选择评分')
+    return
+  }
+  try {
+    const res = await submitRating({
+      acceptNo: ratingForm.acceptNo,
+      rating: ratingForm.rating,
+      content: ratingForm.content
+    })
+    if (res.code === 200) {
+      ElMessage.success('评价提交成功')
+      showRatingDialog.value = false
+      loadPaymentRecords()
+    } else {
+      ElMessage.error(res.message || '评价失败')
+    }
+  } catch (error) {
+    console.error('提交评价失败', error)
+    ElMessage.error('提交评价失败')
+  }
+}
+
+// 草稿相关
+const draftsList = ref<any[]>([])
+
+const loadDrafts = async () => {
+  try {
+    const res = await getDrafts()
+    if (res.code === 200) {
+      draftsList.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载草稿失败', error)
+  }
+}
+
+const editDraft = (draft: any) => {
+  // 跳转到申报页面并传递草稿受理号
+  router.push({
+    path: '/service/apply',
+    query: {
+      itemId: draft.itemId,
+      itemName: draft.itemName,
+      draftAcceptNo: draft.acceptNo
+    }
+  })
+}
+
+const handleDeleteDraft = async (draft: any) => {
+  try {
+    const res = await deleteDraft(draft.acceptNo)
+    if (res.code === 200) {
+      ElMessage.success('草稿已删除')
+      loadDrafts()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除草稿失败', error)
+    ElMessage.error('删除失败')
+  }
+}
 
 const categoryMap: Record<string, string> = {
   'education': '教育服务',
@@ -460,9 +597,29 @@ const doPayment = async (acceptNo: string) => {
 }
 
 const doDownload = async (acceptNo: string) => {
-  const res = await downloadLicense(acceptNo)
-  if (res.code === 200) {
-    ElMessage.success(res.data.message)
+  try {
+    // 直接下载PDF文件
+    const token = localStorage.getItem('c_token')
+    const response = await fetch(`/api/v1/service/payment/download/${acceptNo}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (!response.ok) {
+      ElMessage.error('下载失败')
+      return
+    }
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `证照_${acceptNo}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('证照下载成功')
+  } catch (error) {
+    console.error('下载证照失败', error)
+    ElMessage.error('下载失败')
   }
 }
 
@@ -483,6 +640,8 @@ const handleTabChange = (tabName: string) => {
     loadItems()
   } else if (tabName === 'payment') {
     loadPaymentRecords()
+  } else if (tabName === 'drafts') {
+    loadDrafts()
   }
 }
 
@@ -800,5 +959,27 @@ onMounted(() => {
 .hint-content p {
   margin: 0;
   color: #606266;
+}
+
+/* 草稿区域样式 */
+.drafts-section {
+  padding: 20px 0;
+}
+
+.drafts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.drafts-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.drafts-table {
+  width: 100%;
 }
 </style>
