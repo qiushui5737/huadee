@@ -9,9 +9,9 @@ spring:
       max-file-size: 10MB
       max-request-size: 20MB
   datasource:
-    url: "${DB_URL:jdbc:mysql://localhost:3307/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}"
+    url: "${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}"
     username: "${DB_USERNAME:root}"
-    password: "${DB_PASSWORD:130023}"
+    password: "${DB_PASSWORD:050420}"
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
