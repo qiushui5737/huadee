@@ -78,6 +78,9 @@
           <span v-if="detailItem.price && detailItem.price > 0" style="color: #f56c6c; font-weight: bold;">¥{{ detailItem.price }}</span>
           <span v-else>免费办理</span>
         </el-descriptions-item>
+        <el-descriptions-item label="办理条件" :span="2">{{ detailItem.conditions || '无特殊要求' }}</el-descriptions-item>
+        <el-descriptions-item label="办理时限">{{ detailItem.timeLimit || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="办理流程" :span="2">{{ detailItem.processDesc || '-' }}</el-descriptions-item>
         <el-descriptions-item label="申请材料" :span="2">
           <div v-if="detailItem.formSchema" class="material-list">
             <div v-for="(material, index) in parseFormSchema(detailItem.formSchema)" :key="index" class="material-item">
@@ -126,6 +129,15 @@
         <el-form-item label="缴费金额">
           <el-input-number v-model="formData.price" :min="0" :precision="2" :step="10" style="width: 200px;" />
           <span style="margin-left: 8px; color: #999; font-size: 12px;">元（设为0表示免费办理）</span>
+        </el-form-item>
+        <el-form-item label="办理条件">
+          <el-input v-model="formData.conditions" type="textarea" :rows="3" placeholder="请输入办理条件，如：年满18周岁、本市户籍等" />
+        </el-form-item>
+        <el-form-item label="办理时限">
+          <el-input v-model="formData.timeLimit" placeholder="如：5个工作日、20个工作日" />
+        </el-form-item>
+        <el-form-item label="办理流程">
+          <el-input v-model="formData.processDesc" type="textarea" :rows="3" placeholder="请输入办理流程说明" />
         </el-form-item>
         <el-form-item label="申请材料">
           <div class="material-input">
@@ -180,6 +192,9 @@ const formData = reactive({
   description: '',
   materials: [] as string[],
   price: 0,
+  conditions: '',
+  timeLimit: '',
+  processDesc: '',
   status: 1
 })
 
@@ -275,6 +290,9 @@ const editItem = (item: any) => {
   formData.description = item.description
   formData.materials = parseFormSchema(item.formSchema)
   formData.price = item.price != null ? Number(item.price) : 0
+  formData.conditions = item.conditions || ''
+  formData.timeLimit = item.timeLimit || ''
+  formData.processDesc = item.processDesc || ''
   formData.status = item.status
   addDialogVisible.value = true
 }
@@ -289,6 +307,9 @@ const closeDialog = () => {
   formData.description = ''
   formData.materials = []
   formData.price = 0
+  formData.conditions = ''
+  formData.timeLimit = ''
+  formData.processDesc = ''
   formData.status = 1
   newMaterial.value = ''
 }
@@ -325,6 +346,9 @@ const submitForm = async () => {
     description: formData.description,
     formSchema: JSON.stringify({ materials: formData.materials }),
     price: formData.price,
+    conditions: formData.conditions,
+    timeLimit: formData.timeLimit,
+    processDesc: formData.processDesc,
     status: formData.status
   }
   

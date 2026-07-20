@@ -30,4 +30,13 @@ public class ServiceItem extends BaseEntity {
 
     @TableField("price")
     private java.math.BigDecimal price;
+
+    @TableField("conditions")
+    private String conditions;
+
+    @TableField("time_limit")
+    private String timeLimit;
+
+    @TableField("process_desc")
+    private String processDesc;
 }
