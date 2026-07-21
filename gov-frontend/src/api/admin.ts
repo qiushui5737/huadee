@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // E4-认证权限
 export const adminLogin = (data: { username: string; password: string }) =>

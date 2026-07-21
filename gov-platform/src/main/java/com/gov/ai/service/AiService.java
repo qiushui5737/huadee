@@ -409,7 +409,7 @@ public class AiService {
     }
 
     private List<Map<String, Object>> searchCms(String term) {
-        String sql = "select id, title, content, category, site_code, create_time from cms_content where deleted = 0 and status in ('published', 'approved') and (title like ? or content like ? or category like ?) limit 30";
+        String sql = "select id, title, content, category, site_code, create_time from cms_content where deleted = 0 and status in ('published', 'approved', '已发布', '已审核') and (title like ? or content like ? or category like ?) limit 30";
         String like = "%" + term + "%";
         return query(sql, ps -> {
             ps.setString(1, like);

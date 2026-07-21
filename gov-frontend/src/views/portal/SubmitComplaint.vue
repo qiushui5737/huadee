@@ -1,5 +1,12 @@
 <template>
   <div class="complaint-page">
+    <!-- 返回按钮 -->
+    <div class="back-bar">
+      <el-button size="large" @click="router.back()">
+        <el-icon><ArrowLeft /></el-icon> 返回上页
+      </el-button>
+    </div>
+
     <!-- 页面标题 -->
     <div class="page-header">
       <h1 class="page-title">我要投诉</h1>
@@ -212,10 +219,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadUserFile } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { submitComplaint, complaintProgress } from '@/api/interaction'
 
+const router = useRouter()
 const formRef = ref()
 const submitting = ref(false)
 const fileList = ref<UploadUserFile[]>([])
@@ -505,6 +515,10 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped lang="scss">
+.back-bar {
+  margin-bottom: 12px;
+}
+
 .complaint-page {
   max-width: 1200px;
   margin: 0 auto;

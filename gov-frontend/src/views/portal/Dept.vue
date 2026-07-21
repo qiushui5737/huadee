@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div style="padding:20px;">
     <el-card>
       <h1>Dept - 部门集约 - 子站切换与信息公开</h1>

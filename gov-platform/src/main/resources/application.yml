@@ -1,16 +1,14 @@
 server:
   port: 8080
-  tomcat:
-    max-http-form-post-size: 50MB
-    max-swallow-size: 50MB
 
 spring:
-  servlet:
-    multipart:
-      max-request-size: 50MB
-      max-file-size: 50MB
   application:
     name: gov-platform
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: "${DB_URL:jdbc:mysql://localhost:3306/gov_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}"
     username: "${DB_USERNAME:root}"
@@ -18,9 +16,16 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
+      enabled: ${REDIS_ENABLED:true}
       host: "${REDIS_HOST:localhost}"
       port: ${REDIS_PORT:6379}
       database: 0
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+      timeout: 6000ms
 
 mybatis-plus:
   configuration:

@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // D1-部门子站 & D2-CMS内容
 export const sites = () => request.get('/cms/sites')

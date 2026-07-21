@@ -6,16 +6,16 @@
         <el-menu-item index="/admin">📊 数据大屏</el-menu-item>
         <el-menu-item index="/admin/stats">📈 统计报表</el-menu-item>
         <el-sub-menu index="interaction">
-          <template #title> 互动管理</template>
+          <template #title>💬 互动管理</template>
           <el-menu-item index="/admin/interaction">留言管理</el-menu-item>
           <el-menu-item index="/admin/consultation">咨询管理</el-menu-item>
           <el-menu-item index="/admin/suggestion">建议管理</el-menu-item>
           <el-menu-item index="/admin/complaint">投诉管理</el-menu-item>
           <el-menu-item index="/admin/collection">征集管理</el-menu-item>
+          <el-menu-item index="/admin/disclosure-file">📁 保密文件管理</el-menu-item>
         </el-sub-menu>
         <el-menu-item index="/admin/service">📋 办事审批</el-menu-item>
-        <el-menu-item index="/admin/disclosure"> 依申请审核</el-menu-item>
-        <el-menu-item index="/admin/service-mgmt">⚙ 服务管理</el-menu-item>
+        <el-menu-item index="/admin/disclosure">📄 依申请审核</el-menu-item>
         <el-menu-item index="/admin/cms">📝 内容管理</el-menu-item>
         <el-menu-item index="/admin/ai">🤖 AI审计</el-menu-item>
         <el-menu-item index="/admin/performance">🏆 绩效管理</el-menu-item>
@@ -46,9 +46,9 @@ const userStore = useUserStore()
 
 const pageTitle = computed(() => {
   const map: Record<string,string> = {
-    '/admin':'数据大屏','/admin/stats':'统计报表','/admin/interaction':'互动管理',
+    '/admin':'数据大屏','/admin/stats':'统计报表','/admin/interaction':'留言管理',
     '/admin/service':'办事审批','/admin/disclosure':'依申请审核','/admin/consultation':'咨询管理','/admin/suggestion':'建议管理','/admin/complaint':'投诉管理','/admin/cms':'内容管理',
-    '/admin/ai':'AI审计','/admin/performance':'绩效管理','/admin/system':'系统管理','/admin/collection':'征集管理','/admin/service-mgmt':'服务管理'
+    '/admin/ai':'AI审计','/admin/performance':'绩效管理','/admin/system':'系统管理','/admin/collection':'征集管理','/admin/disclosure-file':'保密文件管理'
   }
   return map[route.path] || '管理端'
 })

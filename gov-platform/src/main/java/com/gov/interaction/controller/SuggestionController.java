@@ -67,6 +67,37 @@ public class SuggestionController {
     }
 
     /**
+     * C端-公开建议列表（分页，无需登录）
+     */
+    @GetMapping("/public/list")
+    public Result<PageResult<Map<String, Object>>> publicList(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String city,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        IPage<Suggestion> pageResult = suggestionService.listPage(keyword, status, city, page, size);
+        List<Map<String, Object>> records = pageResult.getRecords().stream()
+                .map(this::toMap)
+                .toList();
+        PageResult<Map<String, Object>> result = new PageResult<>(
+                records, pageResult.getTotal(), pageResult.getCurrent(), pageResult.getSize());
+        return Result.success(result);
+    }
+
+    /**
+     * C端-公开建议详情
+     */
+    @GetMapping("/public/{id}")
+    public Result<Map<String, Object>> publicDetail(@PathVariable Long id) {
+        Suggestion s = suggestionService.getById(id);
+        if (s == null) {
+            return Result.error("建议不存在");
+        }
+        return Result.success(toMap(s));
+    }
+
+    /**
      * C端-根据建议单号查询进度（仅本人）
      */
     @GetMapping("/progress/{suggestNo}")

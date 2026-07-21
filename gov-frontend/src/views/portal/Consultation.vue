@@ -1,5 +1,10 @@
 <template>
   <div class="consultation-page">
+    <!-- 返回按钮 -->
+    <div class="back-bar">
+      <el-button @click="router.back()"><el-icon><ArrowLeft /></el-icon> 返回上页</el-button>
+    </div>
+
     <!-- 页面标题 -->
     <div class="page-header">
       <h1>我要咨询</h1>
@@ -209,7 +214,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ChatDotRound, Plus } from '@element-plus/icons-vue'
+import { ChatDotRound, Plus, ArrowLeft } from '@element-plus/icons-vue'
 import { submitConsultation, consultationProgress } from '@/api/interaction'
 import { useUserStore } from '@/stores/user'
 
@@ -392,6 +397,10 @@ const goToDetail = (consultNo: string) => {
 </script>
 
 <style scoped lang="scss">
+.back-bar {
+  margin-bottom: 12px;
+}
+
 .consultation-page {
   max-width: 1400px;
   margin: 0 auto;

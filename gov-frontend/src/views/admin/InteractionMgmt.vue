@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="interaction-mgmt">
     <el-card shadow="hover">
       <template #header>

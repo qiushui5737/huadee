@@ -37,30 +37,30 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                 // B端咨询管理接口需要ADMIN角色
                 if (uri.startsWith("/api/v1/consultation/") && !"ADMIN".equals(role)) {
                     String method = request.getMethod();
-                    boolean isCEnd = "GET".equals(method) && uri.matches(".*/progress/.*")
-                            || ("POST".equals(method) && uri.equals("/api/v1/consultation"));
+                    boolean isCEnd = "GET".equals(method)
+                            || "POST".equals(method) && uri.equals("/api/v1/consultation");
                     if (!isCEnd) {
                         response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
                         objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
                         return false;
                     }
                 }
-                // 投诉管理接口：C端用户可访问POST(提交)和GET(progress)
+                // 投诉管理接口：C端用户可访问所有GET和POST(提交)
                 if (uri.startsWith("/api/v1/complaint") && !"ADMIN".equals(role)) {
                     String method = request.getMethod();
                     boolean isCEnd = ("POST".equals(method) && uri.equals("/api/v1/complaint"))
-                            || ("GET".equals(method) && uri.matches(".*/progress/.*"));
+                            || "GET".equals(method);
                     if (!isCEnd) {
                         response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
                         objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
                         return false;
                     }
                 }
-                // 建议管理接口：C端用户可访问POST(提交)和GET(progress)
+                // 建议管理接口：C端用户可访问所有GET和POST(提交)
                 if (uri.startsWith("/api/v1/suggestion") && !"ADMIN".equals(role)) {
                     String method = request.getMethod();
                     boolean isCEnd = ("POST".equals(method) && uri.equals("/api/v1/suggestion"))
-                            || ("GET".equals(method) && uri.matches(".*/progress/.*"));
+                            || "GET".equals(method);
                     if (!isCEnd) {
                         response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
                         objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
@@ -91,6 +91,22 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
                         return false;
                     }
                 }
+                // 依申请公开接口：C端用户可访问POST(apply)和GET(progress/audit-records/file/access/my-applications)
+                if (uri.startsWith("/api/v1/disclosure") && !"ADMIN".equals(role)) {
+                    String method = request.getMethod();
+                    boolean isCEnd = ("POST".equals(method) && uri.equals("/api/v1/disclosure/apply"))
+                            || ("GET".equals(method) && (uri.startsWith("/api/v1/disclosure/progress/")
+                                    || uri.startsWith("/api/v1/disclosure/audit-records/")
+                                    || uri.startsWith("/api/v1/disclosure/file/access/")
+                                    || uri.equals("/api/v1/disclosure/my-applications")));
+                    if (!isCEnd) {
+                        response.setStatus(403); response.setContentType("application/json;charset=UTF-8");
+                        objectMapper.writeValue(response.getWriter(), Result.error(403, "无管理端访问权限"));
+                        return false;
+                    }
+                }
+                // 将token设置到request属性中，供Controller使用
+                request.setAttribute("jwtToken", token);
                 return true;
             }
         }

@@ -15,7 +15,9 @@ export default defineConfig(({ mode }) => {
     port: 3000,
     proxy: {
       // 所有API统一代理到单体后服务(端口8080)
-      '/api': { target: env.VITE_API_PROXY || 'http://localhost:8080', changeOrigin: true }
+      '/api': { target: env.VITE_API_PROXY || 'http://localhost:8080', changeOrigin: true },
+      // 上传文件静态资源代理
+      '/uploads': { target: env.VITE_API_PROXY || 'http://localhost:8080', changeOrigin: true }
     }
   }
   }
