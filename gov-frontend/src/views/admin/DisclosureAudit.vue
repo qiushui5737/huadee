@@ -33,7 +33,13 @@
       <el-table :data="listData" stripe style="width: 100%">
         <el-table-column prop="applyNo" label="申请编号" width="160" />
         <el-table-column prop="applicant" label="申请人" width="100" />
-        <el-table-column prop="content" label="申请内容" min-width="200" show-overflow-tooltip />
+        <el-table-column label="申请文件" width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.fileInfo">{{ row.fileInfo.fileName }}</span>
+            <span v-else style="color: #999;">未指定</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" label="申请内容" min-width="180" show-overflow-tooltip />
         <el-table-column prop="acquireMethod" label="获取方式" width="100" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -46,9 +52,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="申请时间" width="180" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="showDetail(row)">详情</el-button>
+            <el-button link type="warning" size="small" @click="showStatusEdit(row)">编辑状态</el-button>
             <el-button v-if="row.status !== '已答复' && row.status !== '已驳回'" link type="success" size="small" @click="showAudit(row, 'approve')">答复</el-button>
             <el-button v-if="row.status !== '已答复' && row.status !== '已驳回'" link type="danger" size="small" @click="showAudit(row, 'reject')">驳回</el-button>
           </template>
@@ -65,6 +72,10 @@
         <el-descriptions-item label="申请人">{{ currentItem.applicant }}</el-descriptions-item>
         <el-descriptions-item label="身份证号">{{ currentItem.idCard || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ currentItem.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="申请文件">
+          <span v-if="currentItem.fileInfo">{{ currentItem.fileInfo.fileName }}（{{ currentItem.fileInfo.fileCode }}）</span>
+          <span v-else style="color: #999;">未指定</span>
+        </el-descriptions-item>
         <el-descriptions-item label="获取方式">{{ currentItem.acquireMethod || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态"><el-tag :type="statusTagType(currentItem.status)">{{ currentItem.status }}</el-tag></el-descriptions-item>
         <el-descriptions-item label="答复期限">{{ currentItem.deadline || '-' }}</el-descriptions-item>
@@ -73,6 +84,17 @@
         <el-descriptions-item label="答复内容" v-if="currentItem.replyContent" style="white-space: pre-wrap;">{{ currentItem.replyContent }}</el-descriptions-item>
         <el-descriptions-item label="答复人" v-if="currentItem.replyBy">{{ currentItem.replyBy }}</el-descriptions-item>
       </el-descriptions>
+      
+      <!-- 审批流程记录 -->
+      <div v-if="detailAuditRecords.length > 0" style="margin-top: 15px;">
+        <div style="font-weight: 500; margin-bottom: 8px;">审批流程</div>
+        <el-timeline>
+          <el-timeline-item v-for="record in detailAuditRecords" :key="record.id" :timestamp="record.operateTime" placement="top" :type="record.action === 'approve' ? 'success' : record.action === 'reject' ? 'danger' : 'primary'">
+            <div>{{ record.nodeName }} - {{ record.operatorName }}</div>
+            <div v-if="record.opinion" style="color: #666; font-size: 12px;">{{ record.opinion }}</div>
+          </el-timeline-item>
+        </el-timeline>
+      </div>
     </el-dialog>
 
     <!-- 审核弹窗 -->
@@ -94,13 +116,38 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑状态弹窗 -->
+    <el-dialog v-model="statusEditVisible" title="编辑申请状态" width="420px">
+      <el-form label-width="80px">
+        <el-form-item label="申请编号"><span>{{ currentItem?.applyNo }}</span></el-form-item>
+        <el-form-item label="当前状态">
+          <el-tag :type="statusTagType(currentItem?.status)">{{ currentItem?.status }}</el-tag>
+        </el-form-item>
+        <el-form-item label="新状态" required>
+          <el-select v-model="newStatus" placeholder="请选择新状态" style="width: 100%;">
+            <el-option label="已受理" value="已受理" />
+            <el-option label="审核中" value="审核中" />
+            <el-option label="已答复" value="已答复" />
+            <el-option label="已驳回" value="已驳回" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input v-model="statusOperator" placeholder="请输入操作人姓名" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="statusEditVisible = false">取消</el-button>
+        <el-button type="primary" :loading="statusUpdating" @click="handleStatusUpdate">确认修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { disclosureList, auditDisclosure, disclosureStats } from '@/api/interaction'
+import { disclosureList, auditDisclosure, disclosureStats, disclosureAuditRecords, updateDisclosureStatus } from '@/api/interaction'
 
 const filterKeyword = ref('')
 const filterStatus = ref('')
@@ -119,11 +166,16 @@ const statusCards = computed(() => [
 
 const detailVisible = ref(false)
 const auditVisible = ref(false)
+const statusEditVisible = ref(false)
 const currentItem = ref<any>(null)
+const detailAuditRecords = ref<any[]>([])
 const auditAction = ref('approve')
 const auditReply = ref('')
 const auditOperator = ref('系统管理员')
 const auditing = ref(false)
+const newStatus = ref('')
+const statusOperator = ref('系统管理员')
+const statusUpdating = ref(false)
 
 const loadList = async () => {
   try {
@@ -149,9 +201,18 @@ const loadStats = async () => {
   } catch (e) { /* ignore */ }
 }
 
-const showDetail = (row: any) => {
+const showDetail = async (row: any) => {
   currentItem.value = row
   detailVisible.value = true
+  // 加载审批流程记录
+  try {
+    const res: any = await disclosureAuditRecords(row.applyNo)
+    if (res.code === 200) {
+      detailAuditRecords.value = res.data
+    }
+  } catch (e) {
+    console.error('加载审批记录失败', e)
+  }
 }
 
 const showAudit = (row: any, action: string) => {
@@ -184,6 +245,41 @@ const handleAudit = async () => {
     ElMessage.error('操作失败')
   } finally {
     auditing.value = false
+  }
+}
+
+const showStatusEdit = (row: any) => {
+  currentItem.value = row
+  newStatus.value = row.status
+  statusOperator.value = '系统管理员'
+  statusEditVisible.value = true
+}
+
+const handleStatusUpdate = async () => {
+  if (!newStatus.value) {
+    ElMessage.warning('请选择新状态')
+    return
+  }
+  if (newStatus.value === currentItem.value.status) {
+    ElMessage.warning('新状态与当前状态相同')
+    return
+  }
+  statusUpdating.value = true
+  try {
+    const res: any = await updateDisclosureStatus(currentItem.value.applyNo, {
+      status: newStatus.value,
+      operator: statusOperator.value
+    })
+    if (res.code === 200) {
+      ElMessage.success('状态修改成功')
+      statusEditVisible.value = false
+      loadList()
+      loadStats()
+    }
+  } catch (e) {
+    ElMessage.error('状态修改失败')
+  } finally {
+    statusUpdating.value = false
   }
 }
 

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="cms-page">
     <el-tabs v-model="activeTab" type="border-card">
       <el-tab-pane label="子站管理" name="sites">
@@ -51,7 +51,7 @@
             <el-option label="全部" value=""/><el-option v-for="s in sites" :key="s.siteCode" :label="s.siteName" :value="s.siteCode"/>
           </el-select>
           <el-select v-model="contStatus" placeholder="状态" style="width:120px;margin-right:8px">
-            <el-option label="全部" value=""/><el-option label="草稿" value="draft"/><el-option label="待审核" value="待审核"/><el-option label="已发布" value="published"/><el-option label="已驳回" value="rejected"/>
+            <el-option label="全部" value=""/><el-option label="草稿" value="草稿"/><el-option label="待审核" value="待审核"/><el-option label="已发布" value="已发布"/><el-option label="已驳回" value="已驳回"/>
           </el-select>
           <el-input v-model="contKeyword" placeholder="查询标题" style="width:200px;margin-right:8px" clearable @clear="loadContents"/>
           <el-button type="primary" @click="loadContents">查询</el-button>
@@ -70,7 +70,7 @@
           <el-table-column label="操作" width="280" fixed="right">
             <template #default="{row}">
               <el-button size="small" @click="openContentDialog(row)">编辑</el-button>
-              <el-button size="small" type="warning" @click="contentOffline(row.id)" v-if="row.status=='published'">下线</el-button>
+              <el-button size="small" type="warning" @click="contentOffline(row.id)" v-if="row.status=='published'||row.status=='已发布'">下线</el-button>
               <el-button size="small" type="danger" @click="doDeleteContent(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -83,8 +83,8 @@
         <!-- Filter tabs -->
         <div style="margin-bottom:12px;display:flex;align-items:center;gap:4px;">
           <el-button :type="auditFilter==='待审核'?'primary':'default'" size="small" @click="auditFilter='待审核';loadAuditContents()">待审({{ auditCounts.pending||0 }})</el-button>
-          <el-button :type="auditFilter==='published'?'primary':'default'" size="small" @click="auditFilter='published';loadAuditContents()">已审</el-button>
-          <el-button :type="auditFilter==='rejected'?'primary':'default'" size="small" @click="auditFilter='rejected';loadAuditContents()">退回</el-button>
+          <el-button :type="auditFilter==='已发布'?'primary':'default'" size="small" @click="auditFilter='已发布';loadAuditContents()">已审</el-button>
+          <el-button :type="auditFilter==='已驳回'?'primary':'default'" size="small" @click="auditFilter='已驳回';loadAuditContents()">退回</el-button>
           <el-button :type="auditFilter==='all'?'primary':'default'" size="small" @click="auditFilter='all';loadAuditContents()">全部</el-button>
           <span style="flex:1;"></span>
           <el-select v-model="auditSiteCode" placeholder="部门" size="small" style="width:130px;" @change="loadAuditContents">
@@ -397,11 +397,11 @@ function loadContents() {
     .then(function(r){contents.value=r.data.records||r.data;contTotal.value=r.data.total||0})
 }
 function openContentDialog(row?: any) {
-  contForm.value = row ? {...row} : {siteCode:contSiteCode.value,status:'draft',contentType:'article',author:''}
+  contForm.value = row ? {...row} : {siteCode:contSiteCode.value,status:'草稿',contentType:'article',author:''}
   contDialogVisible.value = true
 }
 function saveContent() {
-  contForm.value.status = 'draft';
+  contForm.value.status = '草稿';
   var api = contForm.value.id ? contentUpdate(contForm.value) : contentSave(contForm.value)
   api.then(function(){ ElMessage.success('保存成功'); contDialogVisible.value=false; loadContents() })
 }
@@ -424,7 +424,7 @@ const auditOpinion = ref('')
 const auditCurrentId = ref(0)
 
 function loadAuditContents() {
-  var st = auditFilter.value==='all'?'':(auditFilter.value==='published'?'published':(auditFilter.value==='rejected'?'rejected':'待审核'))
+  var st = auditFilter.value==='all'?'':(auditFilter.value==='已发布'?'已发布':(auditFilter.value==='已驳回'?'已驳回':'待审核'))
   contentList({page:1,size:50,siteCode:auditSiteCode.value||undefined,status:st||undefined}).then(function(r){auditContents.value=r.data.records||r.data})
   contentList({page:1,size:1,status:'待审核'}).then(function(r){auditCounts.value.pending=r.data.total||0})
 }
@@ -457,7 +457,8 @@ function loadSearchIndexes() { searchIndexList({page:1,size:20}).then(function(r
 function syncIndex(name:string){searchIndexSync(name).then(function(){ElMessage.success('同步任务已触发')})}
 function rebuildIndex(name:string){searchIndexRebuild(name).then(function(){ElMessage.success('重建任务已触发')})}
 
-function statusTag(s:string) { var m:Record<string,string>={draft:'info','待审核':'warning',published:'success',rejected:'danger',offline:'info'}; return m[s]||'' }
+function statusTag(s:string) { var m:Record<string,string>={'草稿':'info','待审核':'warning','已发布':'success','published':'success','draft':'info','已驳回':'danger','rejected':'danger','offline':'info'}; return m[s]||'' }
+function buildNodeLevelMap(flat:any[]) { var map:Record<number,number>={}; flat.forEach(function(n:any){ map[n.id]=n.level||1 }); nodeLevelMap.value=map }
 function loadDisclosure() { disclosureCatalog({}).then(function(r){var flat=r.data||[];disclosureTree.value=buildDisclosureTree(flat);buildNodeLevelMap(flat)}) }
 
 onMounted(function(){ loadSites(); loadColumns(); loadContents(); loadAuditContents(); loadDisclosure(); loadSearchIndexes() })

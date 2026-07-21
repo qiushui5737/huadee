@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="interaction-page">
     <!-- 顶部横幅 -->
     <div class="hero-banner">
@@ -61,41 +61,38 @@
           </div>
         </el-col>
 
-        <!-- 右侧：在线访谈 -->
+        <!-- 右侧：建议展示 -->
         <el-col :span="10">
           <div class="section-card">
             <div class="section-header">
-              <h2 class="section-title">在线访谈</h2>
+              <h2 class="section-title">我要建议</h2>
               <div class="section-links">
-                <a href="javascript:void(0)" @click="showPastInterviews">往期访谈</a>
+                <a href="javascript:void(0)" @click="showMoreSuggestions">更多建议</a>
                 <span class="divider">/</span>
-                <a href="javascript:void(0)" @click="showAskQuestion">我要提问</a>
+                <a href="javascript:void(0)" @click="submitSuggestionNav">提交建议</a>
               </div>
             </div>
             <div class="section-divider"></div>
 
-            <div class="interview-card" v-if="currentInterview">
-              <div class="interview-image">
-                <img :src="currentInterview.image" :alt="currentInterview.topic" />
+            <div class="suggestion-list">
+              <div v-if="suggestionList.length === 0" class="empty-state">
+                <el-empty description="暂无建议" />
               </div>
-              <div class="interview-info">
-                <div class="interview-topic">
-                  <el-icon class="topic-icon"><Microphone /></el-icon>
-                  <strong>访谈主题：</strong>{{ currentInterview.topic }}
-                </div>
-                <div class="interview-guest">
-                  <el-icon class="guest-icon"><User /></el-icon>
-                  <strong>访谈嘉宾：</strong>{{ currentInterview.guest }}
-                </div>
-                <div class="interview-background">
-                  <el-icon class="bg-icon"><Document /></el-icon>
-                  <strong>访谈背景：</strong>{{ currentInterview.background }}
+              <div
+                v-for="item in suggestionList"
+                :key="item.id"
+                class="suggestion-item"
+                @click="showSuggestionDetail(item)"
+              >
+                <el-icon class="suggestion-icon"><EditPen /></el-icon>
+                <div class="suggestion-content">
+                  <div class="suggestion-title">{{ item.title }}</div>
+                  <div class="suggestion-meta">
+                    <el-tag :type="suggestionStatusTag(item.status)" size="small">{{ item.status }}</el-tag>
+                    <span class="suggestion-date">{{ item.createTime }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div v-else class="empty-state">
-              <el-empty description="暂无在线访谈" />
             </div>
           </div>
         </el-col>
@@ -165,11 +162,11 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
-  Location, ChatDotRound, EditPen, Phone, Message, VideoCamera, Document,
-  Microphone, User
+  Location, ChatDotRound, EditPen, Phone, Message, Document
 } from '@element-plus/icons-vue'
 import {
-  submitMessage, messageList as fetchMessageList
+  submitMessage, messageList as fetchMessageList, suggestionList as fetchSuggestionList,
+  collectionPublicList
 } from '@/api/interaction'
 
 const router = useRouter()
@@ -180,7 +177,6 @@ const navItems = [
   { label: '我要建议', icon: EditPen, action: 'suggest' },
   { label: '我要投诉', icon: Phone, action: 'complain' },
   { label: '省长信箱', icon: Message, action: 'mailbox' },
-  { label: '在线访谈', icon: VideoCamera, action: 'interview' },
   { label: '意见征集', icon: Document, action: 'collection' }
 ]
 
@@ -188,33 +184,11 @@ const navItems = [
 const letterList = ref<any[]>([])
 const letterStats = ref(0)
 
-// 在线访谈（模拟数据）
-const currentInterview = ref({
-  image: 'https://via.placeholder.com/400x250/409EFF/FFFFFF?text=在线访谈',
-  topic: '四川：加强监测预警 全力做好气象服务保障',
-  guest: '四川省气象局党组成员、副局长 李勇',
-  background: '7月1日起，四川进入防汛抗旱关键时段。经气象等部门会商研判，整体来看，今年主汛期四川平均降水量较常年同期偏少，但...'
-})
+// 建议列表
+const suggestionList = ref<any[]>([])
 
-// 意见征集（模拟数据）
-const collectionList = ref([
-  {
-    id: 1,
-    title: '《四川省"十五五"重点流域水生态环境保护规划（征求意见稿）》',
-    description: '为贯彻落实党的二十届四中全会精神和省委十二届八次全会精神...',
-    status: '进行中',
-    startDate: '2026-07-01',
-    endDate: '2026-08-31'
-  },
-  {
-    id: 2,
-    title: '《四川省城市更新实施办法（草案）》公开征求意见',
-    description: '为推动城市更新工作高质量发展，改善人居环境...',
-    status: '已结束',
-    startDate: '2026-05-01',
-    endDate: '2026-06-30'
-  }
-])
+// 意见征集列表
+const collectionList = ref<any[]>([])
 
 // 导航点击
 const handleNavClick = (item: any) => {
@@ -226,8 +200,6 @@ const handleNavClick = (item: any) => {
     router.push({ name: 'submit-suggest' })
   } else if (item.action === 'complain') {
     router.push({ name: 'submit-complaint' })
-  } else if (item.action === 'interview') {
-    showAskQuestion()
   } else if (item.action === 'collection') {
     router.push({ name: 'collection-list' })
   }
@@ -282,29 +254,44 @@ const showLetterDetail = (row: any) => {
   router.push({ name: 'letter-detail', params: { id: row.id } })
 }
 
-// 往期访谈
-const showPastInterviews = () => {
-  ElMessage.info('往期访谈功能开发中')
+// 更多建议 - 跳转到建议列表页
+const showMoreSuggestions = () => {
+  router.push({ name: 'suggestion-list' })
 }
 
-// 我要提问
-const showAskQuestion = () => {
-  ElMessage.info('在线提问功能开发中')
+// 提交建议
+const submitSuggestionNav = () => {
+  router.push({ name: 'submit-suggest' })
 }
 
-// 更多征集
+// 建议详情
+const showSuggestionDetail = (item: any) => {
+  router.push({ name: 'suggestion-detail', params: { id: item.id } })
+}
+
+// 建议状态标签
+const suggestionStatusTag = (status: string) => {
+  const map: Record<string, string> = { '待受理': 'warning', '处理中': '', '已答复': 'success', '已办结': 'info' }
+  return map[status] || ''
+}
+
+// 更多征集 - 跳转到征集列表页
 const showMoreCollection = () => {
-  ElMessage.info('更多征集功能开发中')
+  router.push({ name: 'collection-list' })
 }
 
-// 结果反馈
+// 结果反馈 - 跳转到征集列表页（筛选已结束）
 const showResultFeedback = () => {
-  ElMessage.info('结果反馈功能开发中')
+  router.push({ name: 'collection-list' })
 }
 
-// 征集详情
+// 征集点击 - 根据状态决定跳转
 const showCollectionDetail = (item: any) => {
-  ElMessage.info(`查看征集详情：${item.title}`)
+  if (item.status === '已结束') {
+    router.push({ name: 'collection-feedback', params: { id: item.id } })
+  } else {
+    router.push({ name: 'collection-detail', params: { id: item.id } })
+  }
 }
 
 // 加载来信列表
@@ -317,6 +304,18 @@ const loadLetters = async () => {
     }
   } catch (e) {
     console.error('加载来信列表失败', e)
+  }
+}
+
+// 加载建议列表
+const loadSuggestions = async () => {
+  try {
+    const res: any = await fetchSuggestionList({ page: 1, size: 5 })
+    if (res.code === 200) {
+      suggestionList.value = res.data.records || []
+    }
+  } catch (e) {
+    console.error('加载建议列表失败', e)
   }
 }
 
@@ -341,8 +340,22 @@ const typeTagType = (type: string) => {
   return map[type] || ''
 }
 
+// 加载意见征集列表
+const loadCollections = async () => {
+  try {
+    const res: any = await collectionPublicList({ page: 1, size: 5 })
+    if (res.code === 200) {
+      collectionList.value = res.data.records || []
+    }
+  } catch (e) {
+    console.error('加载意见征集列表失败', e)
+  }
+}
+
 onMounted(() => {
   loadLetters()
+  loadSuggestions()
+  loadCollections()
 })
 </script>
 
@@ -568,51 +581,57 @@ onMounted(() => {
   color: #606266;
 }
 
-// 在线访谈
-.interview-card {
-  .interview-image {
-    margin-bottom: 16px;
-    border-radius: 8px;
-    overflow: hidden;
+// 建议列表
+.suggestion-list {
+  .suggestion-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.3s;
 
-    img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      display: block;
+    &:hover {
+      background: #f5f7fa;
+      padding-left: 8px;
     }
-  }
 
-  .interview-info {
-    .interview-topic,
-    .interview-guest,
-    .interview-background {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      color: #303133;
-      line-height: 1.6;
+    &:last-child {
+      border-bottom: none;
+    }
 
-      .topic-icon {
-        color: #409eff;
-        margin-top: 2px;
-      }
+    .suggestion-icon {
+      color: #409eff;
+      margin-right: 12px;
+      font-size: 18px;
+      margin-top: 2px;
+    }
 
-      .guest-icon {
-        color: #e6a23c;
-        margin-top: 2px;
-      }
+    .suggestion-content {
+      flex: 1;
 
-      .bg-icon {
-        color: #67c23a;
-        margin-top: 2px;
-      }
-
-      strong {
+      .suggestion-title {
+        font-size: 14px;
         color: #303133;
+        margin-bottom: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
+
+        &:hover {
+          color: #409eff;
+        }
+      }
+
+      .suggestion-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .suggestion-date {
+          font-size: 12px;
+          color: #909399;
+        }
       }
     }
   }

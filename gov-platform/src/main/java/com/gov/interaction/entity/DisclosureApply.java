@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 @TableName("disclosure_apply")
 public class DisclosureApply extends BaseEntity {
 
+    private Long fileId;        // 关联保密文件ID
     private String applyNo;       // 申请编号
     private String applicant;     // 申请人
     private String idCard;        // 身份证号

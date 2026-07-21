@@ -48,7 +48,7 @@
           <p style="font-size:15px;line-height:1.9;color:#333;min-height:80px;">{{ currentNode.description || '暂无目录内容' }}</p>
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid #eee;display:flex;gap:8px;">
             <el-button size="small" @click="ElMessage.success('下载功能开发中')">📥 下载</el-button>
-            <el-button size="small" @click="window.print()">🖨️ 打印</el-button>
+            <el-button size="small" @click="doPrint">🖨️ 打印</el-button>
           </div>
         </div>
         <div v-if="!currentNode" style="text-align:center;padding:80px 0;color:#bbb;font-size:14px;">
@@ -69,6 +69,7 @@ const filterText = ref('')
 const treeData = ref<any[]>([])
 const currentNode = ref<any>(null)
 const siteName = ref('')
+function doPrint() { window.print() }
 function handleClick(d){currentNode.value=d;siteName.value='['+d.name+']'};function filterNode(v,d){if(!v)return true;return d.name.toLowerCase().includes(v.toLowerCase())};
 watch(filterText, function(val) { 
   // Filter handled inline in el-tree's filter-node-method

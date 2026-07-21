@@ -31,12 +31,13 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        updatePasswordIfInvalid("admin");
-        updatePasswordIfInvalid("edu_user");
-        updatePasswordIfInvalid("hea_user");
-        updatePasswordIfInvalid("pol_user");
-        updatePasswordIfInvalid("soc_user");
-        updatePasswordIfInvalid("med_user");
+        // 密码初始化已禁用，避免每次启动覆盖用户密码
+        // updatePasswordIfInvalid("admin");
+        // updatePasswordIfInvalid("edu_user");
+        // updatePasswordIfInvalid("hea_user");
+        // updatePasswordIfInvalid("pol_user");
+        // updatePasswordIfInvalid("soc_user");
+        // updatePasswordIfInvalid("med_user");
         // 只在无数据时初始化，避免重启丢失用户数据
         if (serviceItemMapper.selectCount(null) == 0) {
             initServiceItems();
@@ -115,7 +116,6 @@ public class DataInitializer implements CommandLineRunner {
         item.setCategory(category);
         item.setDeptCode(deptCode);
         item.setDescription(description);
-        item.setPrice(new java.math.BigDecimal(price));
         item.setStatus(1);
         return item;
     }

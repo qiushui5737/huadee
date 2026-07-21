@@ -28,3 +28,15 @@ Thumbs.db
 # === 临时文件 ===
 *.tmp
 *.bak
+
+# === 上传文件 ===
+uploads/
+
+# === 临时脚本/SQL ===
+fix_*.py
+fix_*.sql
+temp_*.sql
+update_*.py
+insert_*.py
+GenHash.*
+my-settings.xml

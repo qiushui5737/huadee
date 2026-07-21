@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // C1-留言系统
 export const submitMessage = (data: any) => request.post('/interaction/message', data)
@@ -19,6 +19,10 @@ export const disclosureProgress = (applyNo: string) => request.get(`/disclosure/
 export const disclosureList = (params: any) => request.get('/disclosure/list', { params })
 export const auditDisclosure = (applyNo: string, data: any) => request.post(`/disclosure/audit/${applyNo}`, data)
 export const disclosureStats = () => request.get('/disclosure/stats')
+export const updateDisclosureStatus = (applyNo: string, data: any) => request.patch(`/disclosure/status/${applyNo}`, data)
+export const disclosureAuditRecords = (applyNo: string) => request.get(`/disclosure/audit-records/${applyNo}`)
+export const disclosureFileAccess = (applyNo: string, fileId: number) => request.get(`/disclosure/file/access/${applyNo}/${fileId}`)
+export const myDisclosureApplications = (idCard: string) => request.get('/disclosure/my-applications', { params: { idCard } })
 
 // C5-民意调查问卷
 export const questionnaireList = (params: any) => request.get('/interaction/questionnaire', { params })
@@ -41,7 +45,9 @@ export const consultationStats = () => request.get('/consultation/stats')
 // C7-我要建议
 export const submitSuggestion = (data: any) => request.post('/suggestion', data)
 export const suggestionProgress = (suggestNo: string) => request.get(`/suggestion/progress/${suggestNo}`)
-export const suggestionList = (params: any) => request.get('/suggestion/list', { params })
+export const suggestionList = (params: any) => request.get('/suggestion/public/list', { params })
+export const adminSuggestionList = (params: any) => request.get('/suggestion/list', { params })
+export const suggestionPublicDetail = (id: number) => request.get(`/suggestion/public/${id}`)
 export const replySuggestion = (suggestNo: string, data: any) => request.post(`/suggestion/${suggestNo}/reply`, data)
 export const updateSuggestionStatus = (suggestNo: string, data: any) => request.patch(`/suggestion/${suggestNo}/status`, data)
 export const finishSuggestion = (suggestNo: string) => request.post(`/suggestion/${suggestNo}/finish`)
@@ -73,3 +79,26 @@ export const addCollectionFeedback = (id: number, data: any) => request.post(`/c
 export const collectionOpinions = (id: number, params: any) => request.get(`/collection/${id}/opinions`, { params })
 export const replyCollectionOpinion = (opinionId: number, data: any) => request.post(`/collection/opinion/${opinionId}/reply`, data)
 export const collectionOpinionStats = (id: number) => request.get(`/collection/${id}/opinion-stats`)
+
+// 保密文件管理（B端）
+export const disclosureFileList = (params: any) => request.get('/disclosure/file/list', { params })
+export const disclosureFileDetail = (id: number) => request.get(`/disclosure/file/${id}`)
+export const createDisclosureFile = (data: any) => request.post('/disclosure/file', data)
+export const updateDisclosureFile = (id: number, data: any) => request.put(`/disclosure/file/${id}`, data)
+export const deleteDisclosureFile = (id: number) => request.delete(`/disclosure/file/${id}`)
+export const publishDisclosureFile = (id: number, operator?: string) => request.post(`/disclosure/file/${id}/publish`, null, { params: { operator } })
+export const disclosureFileStats = () => request.get('/disclosure/file/stats')
+
+// 保密文件（C端-公开列表）
+export const disclosureFilePublicList = (params: any) => request.get('/disclosure/file/public/list', { params })
+export const disclosureFilePublicDetail = (id: number) => request.get(`/disclosure/file/public/${id}`)
+
+// 文件上传
+export const uploadFile = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/file/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+export const deleteUploadedFile = (fileUrl: string) => request.delete('/file/delete', { params: { fileUrl } })

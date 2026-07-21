@@ -10,6 +10,14 @@ public class BusinessException extends RuntimeException {
         this.message = message;
     }
 
+    public static BusinessException of(String message) {
+        return new BusinessException(400, message);
+    }
+
+    public static BusinessException of(int code, String message) {
+        return new BusinessException(code, message);
+    }
+
     public int getCode() { return code; }
     @Override public String getMessage() { return message; }
 }

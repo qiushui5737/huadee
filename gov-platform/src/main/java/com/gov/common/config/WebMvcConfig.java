@@ -20,6 +20,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/v1/suggestion/**")
                 .addPathPatterns("/api/v1/complaint/**")
                 .addPathPatterns("/api/v1/collection/**")
+                .addPathPatterns("/api/v1/disclosure/**")
                 .addPathPatterns("/api/v1/service/catalog/my-items", "/api/v1/service/catalog/items/**")
                 .addPathPatterns("/api/v1/service/payment/**", "/api/v1/service/form/submit", "/api/v1/service/form/upload", "/api/v1/service/form/drafts", "/api/v1/service/form/drafts/**", "/api/v1/service/form/rating", "/api/v1/service/form/ratings")
                 .excludePathPatterns("/api/v1/admin/auth/login", "/api/v1/admin/auth/register", "/api/v1/service/catalog/categories", "/api/v1/service/catalog/items");

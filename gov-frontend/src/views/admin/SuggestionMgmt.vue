@@ -147,7 +147,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { suggestionList, replySuggestion, updateSuggestionStatus, finishSuggestion, suggestionStats } from '@/api/interaction'
+import { adminSuggestionList, replySuggestion, updateSuggestionStatus, finishSuggestion, suggestionStats } from '@/api/interaction'
 
 const cityOptions = [
   '成都市', '自贡市', '攀枝花市', '泸州市', '德阳市', '绵阳市',
@@ -186,7 +186,7 @@ const statusEditing = ref(false)
 
 const loadList = async () => {
   try {
-    const res: any = await suggestionList({
+    const res: any = await adminSuggestionList({
       keyword: filterKeyword.value || undefined,
       status: filterStatus.value || undefined,
       city: filterCity.value || undefined,

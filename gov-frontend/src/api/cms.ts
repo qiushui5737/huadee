@@ -1,4 +1,4 @@
-﻿import request from '@/utils/request'
+import request from '@/utils/request'
 
 // ===== D1 部门子站管理 =====
 export const siteList = (params: any) => request.get('/cms/site/list', { params })
